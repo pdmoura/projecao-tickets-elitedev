@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
+import { CheckoutForm } from "@/components/checkout-form";
 import { formatCurrency, formatEventDate } from "@/modules/events/event-format";
 import { EventNotFoundError, getPublishedEvent } from "@/modules/events";
 import { EventSeatMismatchError, getEventSeatsByIds } from "@/modules/seats";
@@ -53,14 +54,14 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
           <AppHeader />
           <section className="py-14">
             <p className="font-code text-xs uppercase tracking-[0.18em] text-accent">
-              Revisão da seleção
+              Checkout
             </p>
             <h1 className="mt-3 font-display text-5xl leading-[0.95]">
-              Checkout em preparação
+              Revise e conclua
             </h1>
             <p className="mt-5 max-w-xl leading-7 text-ink-muted">
-              A etapa de pagamento será adicionada em seguida. Nenhum assento foi
-              reservado ou comprado.
+              A disponibilidade será confirmada novamente dentro da transação de
+              compra. Sua seleção ainda não representa uma reserva.
             </p>
             <dl className="mt-10 divide-y divide-rule border-y border-rule bg-surface">
               <div className="p-5">
@@ -81,6 +82,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                 <dd className="font-semibold">{formatCurrency(totalCents)}</dd>
               </div>
             </dl>
+            <CheckoutForm eventId={event.id} seatIds={seats.map((seat) => seat.id)} />
           </section>
         </div>
       </main>
