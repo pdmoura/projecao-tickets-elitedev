@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  --projecao-paper: #faf8f3;
+  --projecao-surface: #ffffff;
+  --projecao-surface-secondary: #f1eee6;
+  --projecao-ink: #141414;
+  --projecao-ink-muted: #57534e;
+  --projecao-rule: #e2ded6;
+  --projecao-accent: #d4a017;
+  --projecao-accent-hover: #b88c10;
+  --projecao-success: #16816a;
+  --projecao-warning: #b87500;
+  --projecao-error: #c83f43;
+  --projecao-gate-bg: #091018;
+  --projecao-gate-surface: #111922;
+  --projecao-gate-text: #f5f5f4;
+}
+
+@theme inline {
+  --color-paper: var(--projecao-paper);
+  --color-surface: var(--projecao-surface);
+  --color-surface-secondary: var(--projecao-surface-secondary);
+  --color-ink: var(--projecao-ink);
+  --color-ink-muted: var(--projecao-ink-muted);
+  --color-rule: var(--projecao-rule);
+  --color-accent: var(--projecao-accent);
+  --color-accent-hover: var(--projecao-accent-hover);
+  --color-success: var(--projecao-success);
+  --color-warning: var(--projecao-warning);
+  --color-error: var(--projecao-error);
+  --color-gate-bg: var(--projecao-gate-bg);
+  --color-gate-surface: var(--projecao-gate-surface);
+  --color-gate-text: var(--projecao-gate-text);
+}
+
+* {
+  border-color: var(--projecao-rule);
+}
+
+html {
+  background: var(--projecao-paper);
+}
+
+body {
+  margin: 0;
+  background: var(--projecao-paper);
+  color: var(--projecao-ink);
+  font-family: var(--font-ui), Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--projecao-accent);
+  color: var(--projecao-ink);
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+.font-code {
+  font-family: var(--font-code), "Courier New", monospace;
+}
+
+:focus-visible {
+  outline: 3px solid var(--projecao-accent);
+  outline-offset: 3px;
+}
