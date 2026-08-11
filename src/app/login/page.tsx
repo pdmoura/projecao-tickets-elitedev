@@ -1,9 +1,21 @@
 import { BrandLogo } from "@/components/brand-logo";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/modules/auth/login-form";
+import { getRoleHomePath, getSession } from "@/modules/auth";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const request = new Request("http://localhost", {
+    headers: await headers(),
+  });
+  const session = await getSession(request);
+
+  if (session) {
+    redirect(getRoleHomePath(session.user.role));
+  }
+
   return (
     <main className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col">
