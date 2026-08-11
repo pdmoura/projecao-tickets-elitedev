@@ -14,6 +14,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
     "db:validate": "prisma validate",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -44,6 +45,7 @@
     "postcss": "8.5.6",
     "prisma": "7.9.1",
     "tailwindcss": "4.3.3",
+    "tsx": "4.23.12",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
   }

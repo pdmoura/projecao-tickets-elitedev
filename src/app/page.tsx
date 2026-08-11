@@ -1,4 +1,5 @@
 import { BrandLogo } from "@/components/brand-logo";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -6,9 +7,17 @@ export default function HomePage() {
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col">
         <header className="flex items-center justify-between border-b border-rule pb-5">
           <BrandLogo priority />
-          <p className="font-code text-xs uppercase tracking-[0.18em] text-ink-muted">
-            Cinema independente
-          </p>
+          <div className="flex items-center gap-5">
+            <p className="font-code text-xs uppercase tracking-[0.18em] text-ink-muted">
+              Cinema independente
+            </p>
+            <Link
+              className="font-code text-xs font-medium uppercase tracking-[0.14em] text-ink underline decoration-accent decoration-2 underline-offset-4"
+              href="/login"
+            >
+              Entrar
+            </Link>
+          </div>
         </header>
 
         <section className="flex flex-1 flex-col justify-center py-20">
