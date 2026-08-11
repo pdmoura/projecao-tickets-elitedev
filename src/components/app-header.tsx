@@ -15,6 +15,12 @@ export function AppHeader() {
         </Link>
         <Link
           className="font-code text-xs font-medium uppercase tracking-[0.14em] text-ink underline decoration-accent decoration-2 underline-offset-4"
+          href="/tickets"
+        >
+          Meus ingressos
+        </Link>
+        <Link
+          className="font-code text-xs font-medium uppercase tracking-[0.14em] text-ink underline decoration-accent decoration-2 underline-offset-4"
           href="/login"
         >
           Entrar

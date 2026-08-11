@@ -14,7 +14,14 @@
   --projecao-error: #c83f43;
   --projecao-gate-bg: #091018;
   --projecao-gate-surface: #111922;
+  --projecao-gate-surface-raised: #151e28;
+  --projecao-gate-border: #2a3440;
   --projecao-gate-text: #f5f5f4;
+  --projecao-gate-muted: #a8adb4;
+  --projecao-gate-valid: #45c853;
+  --projecao-gate-invalid: #ef4444;
+  --projecao-gate-used: #f5a623;
+  --projecao-gate-wrong-event: #f0a800;
 }
 
 @theme inline {
@@ -31,7 +38,14 @@
   --color-error: var(--projecao-error);
   --color-gate-bg: var(--projecao-gate-bg);
   --color-gate-surface: var(--projecao-gate-surface);
+  --color-gate-surface-raised: var(--projecao-gate-surface-raised);
+  --color-gate-border: var(--projecao-gate-border);
   --color-gate-text: var(--projecao-gate-text);
+  --color-gate-muted: var(--projecao-gate-muted);
+  --color-gate-valid: var(--projecao-gate-valid);
+  --color-gate-invalid: var(--projecao-gate-invalid);
+  --color-gate-used: var(--projecao-gate-used);
+  --color-gate-wrong-event: var(--projecao-gate-wrong-event);
 }
 
 * {

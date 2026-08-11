@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { authClient } from "./client";
 
-export function LogoutButton() {
+export function LogoutButton({ inverse = false }: { inverse?: boolean }) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -18,7 +18,7 @@ export function LogoutButton() {
 
   return (
     <button
-      className="font-code text-xs font-medium uppercase tracking-[0.14em] text-ink underline decoration-accent decoration-2 underline-offset-4 disabled:opacity-60"
+      className={`font-code text-xs font-medium uppercase tracking-[0.14em] underline decoration-accent decoration-2 underline-offset-4 disabled:opacity-60 ${inverse ? "text-gate-text" : "text-ink"}`}
       disabled={isSubmitting}
       onClick={handleLogout}
       type="button"

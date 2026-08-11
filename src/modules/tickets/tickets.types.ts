@@ -1,0 +1,21 @@
+export type TicketSummary = {
+  createdAt: string;
+  event: {
+    id: string;
+    movieTitle: string;
+    roomName: string;
+    startsAt: string;
+    venueName: string;
+  };
+  id: string;
+  seatLabel: string;
+  status: "AVAILABLE_FOR_ENTRY" | "USED";
+};
+
+export type TicketDetail = TicketSummary & {
+  holderName: string;
+  manualCode: string;
+  qrDataUrl: string;
+  unitPriceCents: number;
+  usedAt: string | null;
+};

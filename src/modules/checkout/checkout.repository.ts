@@ -4,10 +4,10 @@ import { randomUUID } from "node:crypto";
 
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
 import { EventNotFoundError } from "@/modules/events";
+import type { StoredTicketCredentials } from "@/modules/tickets/ticket-credentials";
 
 import { SeatUnavailableError } from "./checkout.errors";
 import type { ApprovedCheckout } from "./checkout.types";
-import type { StoredTicketCredentials } from "./ticket-credentials";
 
 type LockedSeat = {
   eventId: string;

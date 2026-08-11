@@ -58,12 +58,18 @@ export function CheckoutForm({ eventId, seatIds }: CheckoutFormProps) {
       <section className="mt-8 border border-success bg-surface p-5" role="status">
         <p className="font-semibold text-success">Compra confirmada</p>
         <p className="mt-2 text-sm leading-6 text-ink-muted">
-          Sua reserva foi criada e os ingressos foram emitidos. A apresentação
-          dos ingressos será disponibilizada na próxima etapa.
+          Sua reserva foi criada e os ingressos foram emitidos. Cada assento tem
+          uma credencial individual para entrada.
         </p>
         <p className="mt-3 font-code text-xs text-ink-muted">
           Reserva {state.reservationId}
         </p>
+        <Link
+          className="mt-5 inline-block bg-success px-5 py-3 font-semibold text-white"
+          href="/tickets"
+        >
+          Ver meus ingressos
+        </Link>
       </section>
     );
   }

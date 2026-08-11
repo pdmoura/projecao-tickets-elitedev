@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { createStoredTicketCredentials } from "@/modules/tickets/ticket-credentials";
 
 import {
   CheckoutValidationError,
@@ -12,7 +13,6 @@ import {
   persistDeclinedPayment,
 } from "./checkout.repository";
 import { simulatePayment } from "./payment-simulator";
-import { createStoredTicketCredentials } from "./ticket-credentials";
 import type { ApprovedCheckout, CheckoutInput } from "./checkout.types";
 
 export function createCheckoutService(database: PrismaClient = db) {
