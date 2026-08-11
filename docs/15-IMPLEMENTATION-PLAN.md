@@ -453,6 +453,16 @@ A documentação do Neon recomenda conexão pooled para aplicações/serverless 
 
 **Documentação/commit:** registrar URL e procedimento; `chore: configurar primeiro deploy funcional`.
 
+#### Registro de execução — 11/08/2026
+
+- produção publicada em `https://projecao-tickets.vercel.app`;
+- Neon configurado como provider PostgreSQL, sem acoplamento no domínio;
+- `prisma migrate deploy` executado explicitamente via `DIRECT_URL` direta e confirmado sem migrations pendentes;
+- seed executado explicitamente após a migration;
+- runtime Vercel configurado com `DATABASE_URL` pooled; `TEST_DATABASE_URL` não é configurada em produção;
+- `APP_URL` e `BETTER_AUTH_URL` usam a URL HTTPS canônica e o smoke confirmou cookies, login e logout;
+- smoke seed-based confirmou descoberta, checkout aprovado/recusado, ticket/QR/código e `VALID` → `ALREADY_USED`.
+
 ### T10 — Organizer / criação via TMDb
 
 **Objetivo:** implementar criação, edição de drafts e publicação pelo organizador.

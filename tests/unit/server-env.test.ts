@@ -31,6 +31,14 @@ describe("server environment", () => {
     );
   });
 
+  it("does not require TEST_DATABASE_URL at runtime", () => {
+    const productionEnv = Object.fromEntries(
+      Object.entries(validEnv).filter(([key]) => key !== "TEST_DATABASE_URL"),
+    );
+
+    expect(getServerEnv(productionEnv)).toEqual(productionEnv);
+  });
+
   it("requires a canonical Base64 key representing 32 bytes", () => {
     expect(() => validateTicketCredentialEncryptionKey("not-base64")).toThrow(
       "TICKET_CREDENTIAL_ENCRYPTION_KEY",

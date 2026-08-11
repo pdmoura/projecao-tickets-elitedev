@@ -2,7 +2,7 @@ export type ServerEnv = {
   APP_URL: string;
   DATABASE_URL: string;
   DIRECT_URL: string;
-  TEST_DATABASE_URL: string;
+  TEST_DATABASE_URL?: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   TMDB_ACCESS_TOKEN: string;
@@ -13,7 +13,6 @@ const requiredKeys = [
   "APP_URL",
   "DATABASE_URL",
   "DIRECT_URL",
-  "TEST_DATABASE_URL",
   "BETTER_AUTH_SECRET",
   "BETTER_AUTH_URL",
   "TMDB_ACCESS_TOKEN",
@@ -56,9 +55,13 @@ export function validateTicketCredentialEncryptionKey(value: string): void {
 export function getServerEnv(source: EnvironmentSource = process.env): ServerEnv {
   const values = Object.fromEntries(
     requiredKeys.map((key) => [key, getRequiredServerEnvValue(key, source)]),
-  ) as ServerEnv;
+  ) as Omit<ServerEnv, "TEST_DATABASE_URL">;
+  const testDatabaseUrl = source.TEST_DATABASE_URL?.trim();
 
   validateTicketCredentialEncryptionKey(values.TICKET_CREDENTIAL_ENCRYPTION_KEY);
 
-  return values;
+  return {
+    ...values,
+    ...(testDatabaseUrl ? { TEST_DATABASE_URL: testDatabaseUrl } : {}),
+  };
 }
