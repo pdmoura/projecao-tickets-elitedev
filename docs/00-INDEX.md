@@ -2,7 +2,7 @@
 
 > Pacote de documentação de trabalho para o desafio da Plataforma de Eventos e Ingressos.
 >
-> **Status:** especificação pré-implementação. O plano final de implementação ainda não foi incluído intencionalmente.
+> **Status:** especificação pré-implementação com plano definitivo de implementação aprovado.
 
 ## Objetivo
 
@@ -24,6 +24,7 @@ Esta pasta existe para tornar explícito o processo de engenharia antes da escri
 12. **12-REQUIREMENTS-TRACEABILITY.md** — matriz de cobertura requisito por requisito em relação ao desafio.
 13. **13-SECURITY-CONCURRENCY-CHECKLIST.md** — checklist focado de segurança e verificação de condições de corrida.
 14. **14-OFFICIAL-REFERENCES.md** — links para a documentação técnica primária usada durante a preparação da especificação.
+15. **15-IMPLEMENTATION-PLAN.md** — plano definitivo com a sequência aprovada de implementação, dependências, gates e estratégia de entrega.
 
 ## Precedência das fontes de verdade
 
@@ -62,7 +63,6 @@ Os itens abaixo podem ser refinados sem invalidar este pacote:
 - Nomenclatura exata das URLs quando a semântica equivalente for preservada.
 - Nomes exatos dos campos do Prisma, desde que o significado e as constraints do domínio permaneçam iguais.
 - Provedor final do banco de dados em produção.
-- Sequenciamento exato das tarefas e cronograma de implementação de sete dias.
 
 ## Handoff de design
 
