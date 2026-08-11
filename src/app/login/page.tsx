@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/modules/auth/login-form";
 import { getRoleHomePath, getSession } from "@/modules/auth";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const request = new Request("http://localhost", {
     headers: await headers(),

@@ -18,7 +18,9 @@ vi.mock("@/modules/auth", () => ({
 }));
 
 import LoginPage from "@/app/login/page";
+import { dynamic as loginPageDynamic } from "@/app/login/page";
 import { AppHeader } from "@/components/app-header";
+import { LoginForm } from "@/modules/auth/login-form";
 import { LogoutButton } from "@/modules/auth/logout-button";
 
 function sessionFor(role: UserRole): AuthSession {
@@ -70,6 +72,20 @@ function links(header: ReactElement) {
 
 function hasLogoutButton(header: ReactElement) {
   return navigationItems(header).some((item) => item.type === LogoutButton);
+}
+
+function containsElementType(node: ReactNode, type: ReactElement["type"]): boolean {
+  if (!isValidElement(node)) {
+    return false;
+  }
+
+  if (node.type === type) {
+    return true;
+  }
+
+  return Children.toArray(
+    (node as ReactElement<{ children?: ReactNode }>).props.children,
+  ).some((child) => containsElementType(child, type));
 }
 
 describe("global authentication navigation", () => {
@@ -124,7 +140,13 @@ describe("global authentication navigation", () => {
   it("renders the login form when there is no session", async () => {
     mocks.getSession.mockResolvedValue(null);
 
-    await expect(LoginPage()).resolves.toBeTruthy();
+    const loginPage = await LoginPage();
+
+    expect(containsElementType(loginPage, LoginForm)).toBe(true);
     expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("forces per-request rendering for the server session check", () => {
+    expect(loginPageDynamic).toBe("force-dynamic");
   });
 });
