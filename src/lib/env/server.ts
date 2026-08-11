@@ -1,6 +1,7 @@
 import "server-only";
 
 export {
+  getRequiredServerEnvValue,
   getServerEnv,
   validateTicketCredentialEncryptionKey,
 } from "./validation";

@@ -22,7 +22,10 @@ const requiredKeys = [
 
 type EnvironmentSource = Readonly<Record<string, string | undefined>>;
 
-function getRequiredValue(source: EnvironmentSource, key: keyof ServerEnv): string {
+export function getRequiredServerEnvValue(
+  key: keyof ServerEnv,
+  source: EnvironmentSource = process.env,
+): string {
   const value = source[key]?.trim();
 
   if (!value) {
@@ -52,7 +55,7 @@ export function validateTicketCredentialEncryptionKey(value: string): void {
 
 export function getServerEnv(source: EnvironmentSource = process.env): ServerEnv {
   const values = Object.fromEntries(
-    requiredKeys.map((key) => [key, getRequiredValue(source, key)]),
+    requiredKeys.map((key) => [key, getRequiredServerEnvValue(key, source)]),
   ) as ServerEnv;
 
   validateTicketCredentialEncryptionKey(values.TICKET_CREDENTIAL_ENCRYPTION_KEY);

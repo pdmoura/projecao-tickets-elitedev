@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ORGANIZER
+  CUSTOMER
+  GATE
+
+  @@map("user_role")
+}
+
+enum MovieSource {
+  TMDB
+
+  @@map("movie_source")
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+
+  @@map("event_status")
+}
+
+enum EventSeatStatus {
+  AVAILABLE
+  SOLD
+
+  @@map("event_seat_status")
+}
+
+enum PaymentStatus {
+  APPROVED
+  DECLINED
+
+  @@map("payment_status")
+}
+
+enum PaymentProvider {
+  SIMULATOR
+
+  @@map("payment_provider")
+}
+
+enum TicketValidationResult {
+  VALID
+  INVALID
+  ALREADY_USED
+  WRONG_EVENT
+
+  @@map("ticket_validation_result")
+}
+
+model User {
+  id            String             @id @default(cuid())
+  name          String
+  email         String             @unique(map: "user_email_key")
+  emailVerified Boolean            @default(false) @map("email_verified")
+  image         String?
+  role          UserRole           @default(CUSTOMER)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions      Session[]
+  accounts      Account[]
+  events        Event[]            @relation("EventOrganizer")
+  reservations  Reservation[]      @relation("ReservationCustomer")
+  payments      Payment[]          @relation("PaymentCustomer")
+  tickets       Ticket[]           @relation("TicketCustomer")
+  validations   TicketValidation[] @relation("TicketValidationGate")
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  token     String   @unique(map: "session_token_key")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "session_user_id_idx")
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId], map: "account_provider_id_account_id_key")
+  @@index([userId], map: "account_user_id_idx")
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([identifier], map: "verification_identifier_idx")
+  @@map("verification")
+}
+
+model MovieSnapshot {
+  id            String      @id @default(cuid())
+  source        MovieSource @default(TMDB)
+  externalId    Int         @map("external_id")
+  originalTitle String?     @map("original_title")
+  title         String
+  overview      String?
+  posterPath    String?     @map("poster_path")
+  backdropPath  String?     @map("backdrop_path")
+  releaseDate   DateTime?   @map("release_date") @db.Date
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  events        Event[]
+
+  @@unique([source, externalId], map: "movie_snapshot_source_external_id_key")
+  @@map("movie_snapshot")
+}
+
+model Event {
+  id              String             @id @default(cuid())
+  organizerId     String             @map("organizer_id")
+  movieSnapshotId String             @map("movie_snapshot_id")
+  status          EventStatus        @default(DRAFT)
+  venueName       String?            @map("venue_name")
+  roomName        String?            @map("room_name")
+  startsAt        DateTime?          @map("starts_at") @db.Timestamptz(3)
+  priceCents      Int?               @map("price_cents")
+  currency        String             @default("BRL") @db.Char(3)
+  rows            Int?
+  seatsPerRow     Int?               @map("seats_per_row")
+  capacity        Int?
+  publishedAt     DateTime?          @map("published_at") @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  organizer       User               @relation("EventOrganizer", fields: [organizerId], references: [id], onDelete: Restrict)
+  movieSnapshot   MovieSnapshot      @relation(fields: [movieSnapshotId], references: [id], onDelete: Restrict)
+  seats           EventSeat[]
+  reservations    Reservation[]
+  payments        Payment[]
+  tickets         Ticket[]
+  validations     TicketValidation[]
+
+  @@index([organizerId, status], map: "event_organizer_id_status_idx")
+  @@index([movieSnapshotId], map: "event_movie_snapshot_id_idx")
+  @@index([status, startsAt], map: "event_status_starts_at_idx")
+  @@map("event")
+}
+
+model EventSeat {
+  id              String           @id @default(cuid())
+  eventId         String           @map("event_id")
+  rowLabel        String           @map("row_label")
+  seatNumber      Int              @map("seat_number")
+  label           String
+  status          EventSeatStatus  @default(AVAILABLE)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  event           Event            @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  reservationItem ReservationItem?
+  ticket          Ticket?
+
+  @@unique([eventId, rowLabel, seatNumber], map: "event_seat_event_row_number_key")
+  @@unique([eventId, label], map: "event_seat_event_label_key")
+  @@map("event_seat")
+}
+
+model Reservation {
+  id            String            @id @default(cuid())
+  customerId    String            @map("customer_id")
+  eventId       String            @map("event_id")
+  subtotalCents Int               @map("subtotal_cents")
+  totalCents    Int               @map("total_cents")
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  customer      User              @relation("ReservationCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  event         Event             @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  items         ReservationItem[]
+  payment       Payment?
+
+  @@index([customerId, createdAt], map: "reservation_customer_id_created_at_idx")
+  @@index([eventId], map: "reservation_event_id_idx")
+  @@map("reservation")
+}
+
+model ReservationItem {
+  id             String      @id @default(cuid())
+  reservationId  String      @map("reservation_id")
+  eventSeatId    String      @unique(map: "reservation_item_event_seat_id_key") @map("event_seat_id")
+  unitPriceCents Int         @map("unit_price_cents")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  reservation    Reservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  eventSeat      EventSeat   @relation(fields: [eventSeatId], references: [id], onDelete: Restrict)
+  ticket         Ticket?
+
+  @@index([reservationId], map: "reservation_item_reservation_id_idx")
+  @@map("reservation_item")
+}
+
+model Payment {
+  id            String          @id @default(cuid())
+  reservationId String?         @unique(map: "payment_reservation_id_key") @map("reservation_id")
+  customerId    String          @map("customer_id")
+  eventId       String          @map("event_id")
+  status        PaymentStatus
+  amountCents   Int             @map("amount_cents")
+  provider      PaymentProvider @default(SIMULATOR)
+  reference     String          @unique(map: "payment_reference_key")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  reservation   Reservation?    @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  customer      User            @relation("PaymentCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  event         Event           @relation(fields: [eventId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, createdAt], map: "payment_customer_id_created_at_idx")
+  @@index([eventId, createdAt], map: "payment_event_id_created_at_idx")
+  @@index([status, createdAt], map: "payment_status_created_at_idx")
+  @@map("payment")
+}
+
+model Ticket {
+  id                        String             @id @default(cuid())
+  reservationItemId         String             @unique(map: "ticket_reservation_item_id_key") @map("reservation_item_id")
+  eventId                   String             @map("event_id")
+  customerId                String             @map("customer_id")
+  eventSeatId               String             @unique(map: "ticket_event_seat_id_key") @map("event_seat_id")
+  validationTokenHash       String             @unique(map: "ticket_validation_token_hash_key") @map("validation_token_hash") @db.VarChar(64)
+  validationTokenCiphertext String             @map("validation_token_ciphertext")
+  validationTokenIv         String             @map("validation_token_iv") @db.VarChar(16)
+  validationTokenAuthTag    String             @map("validation_token_auth_tag") @db.VarChar(24)
+  manualCode                String             @unique(map: "ticket_manual_code_key") @map("manual_code") @db.VarChar(32)
+  shareTokenHash            String?            @unique(map: "ticket_share_token_hash_key") @map("share_token_hash") @db.VarChar(64)
+  usedAt                    DateTime?          @map("used_at") @db.Timestamptz(3)
+  createdAt                 DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  reservationItem           ReservationItem    @relation(fields: [reservationItemId], references: [id], onDelete: Restrict)
+  event                     Event              @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  customer                  User               @relation("TicketCustomer", fields: [customerId], references: [id], onDelete: Restrict)
+  eventSeat                 EventSeat          @relation(fields: [eventSeatId], references: [id], onDelete: Restrict)
+  validations               TicketValidation[]
+
+  @@index([eventId, usedAt], map: "ticket_event_id_used_at_idx")
+  @@index([customerId, createdAt], map: "ticket_customer_id_created_at_idx")
+  @@map("ticket")
+}
+
+model TicketValidation {
+  id          String                 @id @default(cuid())
+  ticketId    String?                @map("ticket_id")
+  eventId     String                 @map("event_id")
+  gateUserId  String                 @map("gate_user_id")
+  result      TicketValidationResult
+  validatedAt DateTime               @default(now()) @map("validated_at") @db.Timestamptz(3)
+  ticket      Ticket?                @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  event       Event                  @relation(fields: [eventId], references: [id], onDelete: Restrict)
+  gateUser    User                   @relation("TicketValidationGate", fields: [gateUserId], references: [id], onDelete: Restrict)
+
+  @@index([ticketId, validatedAt], map: "ticket_validation_ticket_id_validated_at_idx")
+  @@index([eventId, validatedAt], map: "ticket_validation_event_id_validated_at_idx")
+  @@index([gateUserId, validatedAt], map: "ticket_validation_gate_user_id_validated_at_idx")
+  @@index([result, validatedAt], map: "ticket_validation_result_validated_at_idx")
+  @@map("ticket_validation")
+}

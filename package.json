@@ -11,13 +11,23 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:validate": "prisma validate",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@better-auth/prisma-adapter": "1.6.27",
+    "@prisma/adapter-pg": "7.9.1",
+    "@prisma/client": "7.9.1",
+    "better-auth": "1.6.27",
     "next": "16.3.0",
+    "pg": "8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "0.0.1"
@@ -26,11 +36,13 @@
     "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "24.13.3",
+    "@types/pg": "8.21.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.0",
     "postcss": "8.5.6",
+    "prisma": "7.9.1",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
     "vitest": "4.1.10"
