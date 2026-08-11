@@ -1,0 +1,11 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Marca compacta projeção</title>
+  <rect x="2" y="2" width="60" height="60" rx="10" fill="#141414"/>
+  <path d="M21 48V18H32.5C40.5 18 45 22.7 45 29.3C45 36 40.3 40.4 32.8 40.4H27.7V48H21ZM27.7 34.4H32.1C36 34.4 38.3 32.5 38.3 29.4C38.3 26.2 36 24.4 32.1 24.4H27.7V34.4Z" fill="#FAF8F3"/>
+  <circle cx="47.5" cy="16.5" r="4.5" fill="#D4A017"/>
+  <circle cx="10" cy="18" r="1.4" fill="#FAF8F3" opacity=".5"/>
+  <circle cx="10" cy="25" r="1.4" fill="#FAF8F3" opacity=".5"/>
+  <circle cx="10" cy="32" r="1.4" fill="#FAF8F3" opacity=".5"/>
+  <circle cx="10" cy="39" r="1.4" fill="#FAF8F3" opacity=".5"/>
+  <circle cx="10" cy="46" r="1.4" fill="#FAF8F3" opacity=".5"/>
+</svg>
