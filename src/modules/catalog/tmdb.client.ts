@@ -63,11 +63,46 @@ function getRetryDelayMs(response: Response | null, fallbackMs: number): number 
     : Math.min(Math.max(retryAt - Date.now(), 0), maximumRetryAfterMs);
 }
 
-function isTimeout(error: unknown): boolean {
-  return (
-    error instanceof DOMException &&
-    (error.name === "TimeoutError" || error.name === "AbortError")
-  );
+function getErrorName(error: unknown): string {
+  return error instanceof Error ? error.name : "UnknownError";
+}
+
+function getErrorCauseCode(error: unknown): string | null {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "cause" in error &&
+    typeof error.cause === "object" &&
+    error.cause !== null &&
+    "code" in error.cause &&
+    typeof error.cause.code === "string"
+  ) {
+    return error.cause.code;
+  }
+
+  return null;
+}
+
+function logTmdbFailure(
+  logger: TmdbLogger,
+  operation: string,
+  path: string,
+  attempt: number,
+  maximumAttempts: number,
+  response: Response | null,
+  error?: unknown,
+): void {
+  const causeCode = error ? getErrorCauseCode(error) : null;
+  const details = [
+    `operation=${operation}`,
+    `path=${path}`,
+    `attempt=${attempt}/${maximumAttempts}`,
+    `status=${response?.status ?? "none"}`,
+    `error.name=${response ? "Response" : getErrorName(error)}`,
+    ...(causeCode ? [`error.cause.code=${causeCode}`] : []),
+  ];
+
+  logger.warn(`TMDb request failed ${details.join(" ")}`);
 }
 
 export function createTmdbClient(options: TmdbClientOptions = {}): TmdbClient {
@@ -120,8 +155,13 @@ export function createTmdbClient(options: TmdbClientOptions = {}): TmdbClient {
             return await response.json();
           }
 
-          logger.warn(
-            `TMDb request failed operation=${operation} path=${path} attempt=${attempt + 1}/${maximumAttempts} status=${response.status}`,
+          logTmdbFailure(
+            logger,
+            operation,
+            path,
+            attempt + 1,
+            maximumAttempts,
+            response,
           );
 
           if (!retryableStatuses.has(response.status) || attempt === maximumAttempts - 1) {
@@ -134,8 +174,14 @@ export function createTmdbClient(options: TmdbClientOptions = {}): TmdbClient {
             throw error;
           }
 
-          logger.warn(
-            `TMDb request failed operation=${operation} path=${path} attempt=${attempt + 1}/${maximumAttempts} reason=${isTimeout(error) ? "timeout" : "network_error"}`,
+          logTmdbFailure(
+            logger,
+            operation,
+            path,
+            attempt + 1,
+            maximumAttempts,
+            null,
+            error,
           );
 
           if (attempt === maximumAttempts - 1) {

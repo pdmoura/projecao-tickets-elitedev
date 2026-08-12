@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { GET as searchMoviesRoute } from "@/app/api/catalog/movies/route";
+import { GET as discoverMoviesRoute } from "@/app/api/catalog/discover/route";
+import { GET as genresRoute } from "@/app/api/catalog/genres/route";
+import { GET as trendingMoviesRoute } from "@/app/api/catalog/trending/route";
 import { CatalogUnavailableError } from "@/modules/catalog/catalog.errors";
+import { createMemoryCatalogCache } from "@/modules/catalog/catalog.cache";
 import { createCatalogService } from "@/modules/catalog/catalog.service";
 import { createTmdbClient } from "@/modules/catalog/tmdb.client";
 
@@ -41,8 +45,11 @@ const catalogRouteMocks = vi.hoisted(() => {
   return {
     CatalogUnavailableError,
     CatalogValidationError,
+    discoverMovies: vi.fn(),
     getMovieDetails: vi.fn(),
     getMovieVideos: vi.fn(),
+    getTrendingMovies: vi.fn(),
+    listGenres: vi.fn(),
     searchMovies: vi.fn(),
   };
 });
@@ -91,7 +98,110 @@ function testLogger() {
   return { info: vi.fn(), warn: vi.fn() };
 }
 
+function discoveryMovies(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: index + 1,
+    overview: `Sinopse ${index + 1}`,
+    poster_path: index === 0 ? null : `/poster-${index + 1}.jpg`,
+    release_date: `202${index % 6}-01-01`,
+    title: `Filme ${index + 1}`,
+    vote_average: 7.5,
+  }));
+}
+
 describe("TMDb catalog", () => {
+  it("reuses successful discover responses by complete key and prefetches only the next page", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockImplementation(async () => jsonResponse({ results: discoveryMovies(20), total_results: 45 }));
+    const catalog = createCatalogService(
+      createTmdbClient({ accessToken: "tmdb-test-token", fetchFn: fetchMock }),
+      createMemoryCatalogCache(),
+    );
+    const input = { genreId: 18, page: 1, sort: "popularity" as const, year: 2024 };
+
+    await expect(catalog.discoverMovies(input)).resolves.toMatchObject({ page: 1 });
+    await expect(catalog.discoverMovies(input)).resolves.toMatchObject({ page: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(new URL(String(fetchMock.mock.calls[0]?.[0])).searchParams.get("page")).toBe("1");
+  });
+
+  it("keeps filters and pages in distinct server cache entries", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockImplementation(async () => jsonResponse({ results: discoveryMovies(20), total_results: 20 }));
+    const catalog = createCatalogService(
+      createTmdbClient({ accessToken: "tmdb-test-token", fetchFn: fetchMock }),
+      createMemoryCatalogCache(),
+    );
+
+    await catalog.discoverMovies({ genreId: 18, page: 1, sort: "popularity", year: null });
+    await catalog.discoverMovies({ genreId: 28, page: 1, sort: "popularity", year: null });
+    await catalog.discoverMovies({ genreId: 18, page: 2, sort: "popularity", year: null });
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not cache failed upstream calls and reuses successful genres and details", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockResolvedValueOnce(jsonResponse({ genres: [{ id: 18, name: "Drama" }] }))
+      .mockResolvedValueOnce(jsonResponse({ genres: [], id: 42, overview: "", poster_path: null, title: "Filme" }));
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger: testLogger(),
+        sleepFn: vi.fn(async () => {}),
+      }),
+      createMemoryCatalogCache(),
+    );
+
+    const unavailableFetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>().mockResolvedValue(jsonResponse({}, 503));
+    const unavailableClient = createTmdbClient({
+      accessToken: "tmdb-test-token",
+      fetchFn: unavailableFetch,
+      logger: testLogger(),
+      sleepFn: vi.fn(async () => {}),
+    });
+    const unavailableCatalog = createCatalogService(unavailableClient, createMemoryCatalogCache());
+
+    await expect(unavailableCatalog.listGenres()).rejects.toBeInstanceOf(CatalogUnavailableError);
+    await expect(unavailableCatalog.listGenres()).rejects.toBeInstanceOf(CatalogUnavailableError);
+    expect(unavailableFetch).toHaveBeenCalledTimes(6);
+    await expect(catalog.listGenres()).resolves.toEqual([{ id: 18, name: "Drama" }]);
+    await expect(catalog.listGenres()).resolves.toEqual([{ id: 18, name: "Drama" }]);
+    await catalog.getMovieDetails(42);
+    await catalog.getMovieDetails(42);
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not let a failed discover prefetch affect the current page", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({ results: discoveryMovies(20), total_results: 45 }))
+      .mockResolvedValueOnce(jsonResponse({}, 503));
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger: testLogger(),
+        sleepFn: vi.fn(async () => {}),
+      }),
+      createMemoryCatalogCache(),
+    );
+
+    await expect(catalog.discoverMovies({ genreId: null, page: 1, sort: "popularity", year: null })).resolves.toMatchObject({ page: 1 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
   it("searches and normalizes movies with pt-BR and the approved poster fallback", async () => {
     const { catalog, fetchMock } = catalogWithResponse(
       jsonResponse({
@@ -135,6 +245,130 @@ describe("TMDb catalog", () => {
       "Bearer tmdb-test-token",
     );
     expect(new URL(String(input)).pathname).toBe("/3/search/movie");
+  });
+
+  it("applies genre, year and sorting before paginating a title search", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockImplementation(async (input) => {
+        const page = Number(new URL(String(input)).searchParams.get("page"));
+
+        return jsonResponse({
+          page,
+          results: Array.from({ length: 10 }, (_, index) => ({
+            genre_ids: [page === 1 && index === 0 ? 18 : 28],
+            id: page * 10 + index,
+            overview: "",
+            popularity: index,
+            poster_path: null,
+            release_date: "2024-01-01",
+            title: `Filme ${page}-${index}`,
+            vote_average: index,
+            vote_count: 100,
+          })),
+          total_pages: 2,
+        });
+      });
+    const catalog = createCatalogService(
+      createTmdbClient({ accessToken: "tmdb-test-token", fetchFn: fetchMock }),
+    );
+
+    await expect(catalog.searchMovies("Batman", 1, {
+      genreId: 18,
+      sort: "rating",
+      year: 2024,
+    })).resolves.toMatchObject({
+      items: [{ externalId: 10 }],
+      page: 1,
+      totalPages: 1,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(new URL(String(fetchMock.mock.calls[0]?.[0])).searchParams.get("primary_release_year")).toBe("2024");
+  });
+
+  it("normalizes the weekly trending list and localized genres", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({ results: discoveryMovies(12) }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          genres: [
+            { id: 878, name: "Ficção científica" },
+            { id: 18, name: "Drama" },
+          ],
+        }),
+      );
+    const catalog = createCatalogService(
+      createTmdbClient({ accessToken: "tmdb-test-token", fetchFn: fetchMock }),
+    );
+
+    const trending = await catalog.getTrendingMovies();
+    expect(trending).toHaveLength(10);
+    expect(trending[0]).toMatchObject({
+      externalId: 1,
+      posterUrl: "/placeholders/poster-unavailable.png",
+      rating: 7.5,
+    });
+    await expect(catalog.listGenres()).resolves.toEqual([
+      { id: 18, name: "Drama" },
+      { id: 878, name: "Ficção científica" },
+    ]);
+
+    expect(new URL(String(fetchMock.mock.calls[0]?.[0])).pathname).toBe(
+      "/3/trending/movie/week",
+    );
+    expect(new URL(String(fetchMock.mock.calls[1]?.[0])).pathname).toBe(
+      "/3/genre/movie/list",
+    );
+  });
+
+  it("applies server-side discover filters, ordering and ten-movie UI pages", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockImplementation(async () =>
+        jsonResponse({ results: discoveryMovies(20), total_results: 45 }),
+      );
+    const catalog = createCatalogService(
+      createTmdbClient({ accessToken: "tmdb-test-token", fetchFn: fetchMock }),
+    );
+
+    const discovered = await catalog.discoverMovies({
+      genreId: 18,
+      page: 2,
+      sort: "rating",
+      year: 2024,
+    });
+    expect(discovered.items).toHaveLength(10);
+    expect(discovered.items[0]).toMatchObject({ externalId: 11 });
+    expect(discovered.items.at(-1)).toMatchObject({ externalId: 20 });
+    expect(discovered).toMatchObject({ page: 2, totalPages: 5 });
+
+    const ratingUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(ratingUrl.pathname).toBe("/3/discover/movie");
+    expect(ratingUrl.searchParams.get("page")).toBe("1");
+    expect(ratingUrl.searchParams.get("with_genres")).toBe("18");
+    expect(ratingUrl.searchParams.get("primary_release_year")).toBe("2024");
+    expect(ratingUrl.searchParams.get("sort_by")).toBe("vote_average.desc");
+    expect(ratingUrl.searchParams.get("vote_count.gte")).toBe("100");
+
+    const sortExpectations = {
+      popularity: "popularity.desc",
+      releaseDate: "primary_release_date.desc",
+      titleAsc: "title.asc",
+      titleDesc: "title.desc",
+    } as const;
+
+    for (const [sort, expected] of Object.entries(sortExpectations)) {
+      await catalog.discoverMovies({
+        genreId: null,
+        page: 3,
+        sort: sort as keyof typeof sortExpectations,
+        year: null,
+      });
+      const url = new URL(String(fetchMock.mock.calls.at(-1)?.[0]));
+      expect(url.searchParams.get("page")).toBe("2");
+      expect(url.searchParams.get("sort_by")).toBe(expected);
+    }
   });
 
   it("normalizes movie details without exposing the external response", async () => {
@@ -277,7 +511,7 @@ describe("TMDb catalog", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(logger.warn).toHaveBeenCalledWith(
-      "TMDb request failed operation=details path=/movie/157336 attempt=1/2 status=503",
+      "TMDb request failed operation=details path=/movie/157336 attempt=1/2 status=503 error.name=Response",
     );
     expect(logger.warn.mock.calls.flat().join(" ")).not.toContain("tmdb-test-token");
   });
@@ -356,10 +590,10 @@ describe("TMDb catalog", () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(logger.warn).toHaveBeenCalledWith(
-      "TMDb request failed operation=search path=/search/movie attempt=1/3 status=503",
+      "TMDb request failed operation=search path=/search/movie attempt=1/3 status=503 error.name=Response",
     );
     expect(logger.warn).toHaveBeenCalledWith(
-      "TMDb request failed operation=search path=/search/movie attempt=2/3 reason=network_error",
+      "TMDb request failed operation=search path=/search/movie attempt=2/3 status=none error.name=TypeError",
     );
     expect(logger.info).toHaveBeenCalledWith(
       "TMDb request recovered operation=search attempt=3/3",
@@ -417,5 +651,24 @@ describe("TMDb catalog", () => {
       },
     });
     expect(catalogRouteMocks.searchMovies).not.toHaveBeenCalled();
+  });
+
+  it("keeps the discovery endpoints organizer-only and returns application DTOs", async () => {
+    authMocks.requireRole.mockResolvedValue({ id: "organizer" });
+    catalogRouteMocks.getTrendingMovies.mockResolvedValue([{ externalId: 1 }]);
+    catalogRouteMocks.listGenres.mockResolvedValue([{ id: 18, name: "Drama" }]);
+    catalogRouteMocks.discoverMovies.mockResolvedValue({ items: [{ externalId: 2 }], page: 1, totalPages: 1 });
+
+    await expect(trendingMoviesRoute(new Request("http://localhost:3000/api/catalog/trending"))).resolves.toMatchObject({ status: 200 });
+    await expect(genresRoute(new Request("http://localhost:3000/api/catalog/genres"))).resolves.toMatchObject({ status: 200 });
+    await expect(discoverMoviesRoute(new Request("http://localhost:3000/api/catalog/discover?page=1&sort=popularity"))).resolves.toMatchObject({ status: 200 });
+
+    expect(authMocks.requireRole).toHaveBeenCalledWith(expect.any(Request), "ORGANIZER");
+    expect(catalogRouteMocks.discoverMovies).toHaveBeenCalledWith({
+      genreId: null,
+      page: 1,
+      sort: "popularity",
+      year: null,
+    });
   });
 });

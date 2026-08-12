@@ -12,6 +12,12 @@ export type CatalogSearchResult = {
   totalPages: number;
 };
 
+export type CatalogSearchFilters = {
+  genreId: number | null;
+  sort: CatalogDiscoverSort;
+  year: number | null;
+};
+
 export type CatalogMovieDetails = CatalogMovie & {
   backdropUrl: string | null;
   genres: string[];
@@ -26,4 +32,36 @@ export type CatalogTrailer = {
 
 export type CatalogMovieVideos = {
   trailer: CatalogTrailer | null;
+};
+
+export type CatalogDiscoveryMovie = CatalogMovie & {
+  rating: number | null;
+};
+
+export type CatalogGenre = {
+  id: number;
+  name: string;
+};
+
+export const catalogDiscoverSorts = [
+  "popularity",
+  "rating",
+  "releaseDate",
+  "titleAsc",
+  "titleDesc",
+] as const;
+
+export type CatalogDiscoverSort = (typeof catalogDiscoverSorts)[number];
+
+export type CatalogDiscoverInput = {
+  genreId: number | null;
+  page: number;
+  sort: CatalogDiscoverSort;
+  year: number | null;
+};
+
+export type CatalogDiscoverResult = {
+  items: CatalogDiscoveryMovie[];
+  page: number;
+  totalPages: number;
 };

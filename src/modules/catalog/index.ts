@@ -3,6 +3,9 @@ import "server-only";
 export {
   getMovieDetails,
   getMovieVideos,
+  getTrendingMovies,
+  listGenres,
+  discoverMovies,
   searchMovies,
 } from "./catalog.service";
 export {
@@ -11,6 +14,11 @@ export {
 } from "./catalog.errors";
 export type {
   CatalogMovie,
+  CatalogDiscoverInput,
+  CatalogDiscoverResult,
+  CatalogDiscoveryMovie,
+  CatalogDiscoverSort,
+  CatalogGenre,
   CatalogMovieDetails,
   CatalogMovieVideos,
   CatalogSearchResult,

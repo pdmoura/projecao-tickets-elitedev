@@ -10,10 +10,10 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     await requireRole(request, "ORGANIZER");
 
-    const { page, query } = parseSearchMoviesInput(
+    const { genreId, page, query, sort, year } = parseSearchMoviesInput(
       new URL(request.url).searchParams,
     );
-    const result = await searchMovies(query, page);
+    const result = await searchMovies(query, page, { genreId, sort, year });
 
     return NextResponse.json(result);
   } catch (error) {
