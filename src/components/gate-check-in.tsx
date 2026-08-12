@@ -1,8 +1,9 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useState } from "react";
 
 import { QrCameraScanner } from "@/components/qr-camera-scanner";
+import { GateResultIcon } from "@/components/gate-result-icon";
 import type { CheckInResult } from "@/modules/check-in";
 import { formatEventDate } from "@/modules/events/event-format";
 import type { PublishedEventSummary } from "@/modules/events";
@@ -18,11 +19,22 @@ type SubmissionState =
   | { kind: "error"; message: string };
 
 const resultAppearance = {
-  ALREADY_USED: { border: "border-gate-used", icon: "◷", label: "JÁ UTILIZADO", text: "text-gate-used", title: "Entrada já registrada" },
-  INVALID: { border: "border-gate-invalid", icon: "×", label: "INVÁLIDO", text: "text-gate-invalid", title: "Credencial não reconhecida" },
-  VALID: { border: "border-gate-valid", icon: "✓", label: "VÁLIDO", text: "text-gate-valid", title: "Acesso liberado" },
-  WRONG_EVENT: { border: "border-gate-wrong-event", icon: "!", label: "SESSÃO INCORRETA", text: "text-gate-wrong-event", title: "Ingresso de outra sessão" },
+  ALREADY_USED: { border: "border-gate-used", label: "JÁ UTILIZADO", text: "text-gate-used", title: "Entrada já registrada" },
+  INVALID: { border: "border-gate-invalid", label: "INVÁLIDO", text: "text-gate-invalid", title: "Credencial não reconhecida" },
+  VALID: { border: "border-gate-valid", label: "VÁLIDO", text: "text-gate-valid", title: "Acesso liberado" },
+  WRONG_EVENT: { border: "border-gate-wrong-event", label: "SESSÃO INCORRETA", text: "text-gate-wrong-event", title: "Ingresso de outra sessão" },
 } as const;
+
+function formatManualCodeInput(value: string): string {
+  const normalized = value
+    .toUpperCase()
+    .replace(/O/g, "0")
+    .replace(/[IL]/g, "1")
+    .replace(/[^0-9A-HJKMNP-TV-Z]/g, "")
+    .slice(0, 12);
+
+  return normalized.match(/.{1,4}/g)?.join("-") ?? "";
+}
 
 function ValidationResult({ onReset, value }: { onReset: () => void; value: CheckInResult }) {
   const appearance = resultAppearance[value.result];
@@ -30,7 +42,7 @@ function ValidationResult({ onReset, value }: { onReset: () => void; value: Chec
   return (
     <section aria-live="assertive" className={`border-2 ${appearance.border} bg-gate-surface-raised p-7 sm:p-10`} role="status">
       <div className="text-center">
-        <div aria-hidden="true" className={`mx-auto flex size-20 items-center justify-center rounded-full border-2 ${appearance.border} font-code text-5xl ${appearance.text}`}>{appearance.icon}</div>
+        <div className="mx-auto flex h-[5rem] items-center justify-center sm:h-[6.5rem]"><GateResultIcon status={value.result} /></div>
         <p className={`mt-7 font-code text-sm font-medium tracking-[0.18em] ${appearance.text}`}>{appearance.label}</p>
         <h2 className="mt-3 font-display text-4xl leading-none sm:text-5xl">{appearance.title}</h2>
       </div>
@@ -45,6 +57,7 @@ function ValidationResult({ onReset, value }: { onReset: () => void; value: Chec
 
 export function GateCheckIn({ events }: GateCheckInProps) {
   const [state, setState] = useState<SubmissionState>({ kind: "idle" });
+  const [manualCode, setManualCode] = useState("");
   const [eventId, setEventId] = useState(events[0]?.id ?? "");
   const selectedEvent = events.find((event) => event.id === eventId);
   const sessionMessage = selectedEvent?.gateState === "NOT_STARTED"
@@ -73,6 +86,11 @@ export function GateCheckIn({ events }: GateCheckInProps) {
 
     await submitCredential("/api/check-in/manual", { code: String(code ?? "") });
     form.reset();
+    setManualCode("");
+  }
+
+  function changeManualCode(event: ChangeEvent<HTMLInputElement>) {
+    setManualCode(formatManualCodeInput(event.target.value));
   }
 
   if (state.kind === "result") return <ValidationResult onReset={() => setState({ kind: "idle" })} value={state.value} />;
@@ -89,7 +107,7 @@ export function GateCheckIn({ events }: GateCheckInProps) {
         <h1 className="mt-3 font-display text-4xl leading-none sm:text-5xl" id="manual-title">Digitar código</h1>
         <p className="mt-4 text-sm leading-6 text-gate-muted">A leitura manual está sempre disponível quando a câmera não puder ser usada.</p>
         <form className="mt-8 grid gap-6" onSubmit={submitManualCode}>
-          <label><span className="text-sm font-medium">Código manual do ingresso</span><input autoComplete="off" autoFocus className="mt-2 w-full border border-gate-border bg-gate-bg px-4 py-4 font-code text-lg uppercase tracking-[0.12em] text-gate-text placeholder:text-gate-muted" disabled={events.length === 0 || state.kind === "submitting"} inputMode="text" maxLength={20} name="code" placeholder="K7PX-4M2Q-W9DN" required spellCheck={false} /></label>
+          <label><span className="text-sm font-medium">Código manual do ingresso</span><input aria-describedby="manual-code-format" autoCapitalize="characters" autoComplete="off" autoFocus className="mt-2 w-full border border-gate-border bg-gate-bg px-4 py-4 font-code text-lg uppercase tracking-[0.12em] text-gate-text placeholder:text-gate-muted" disabled={events.length === 0 || state.kind === "submitting"} inputMode="text" maxLength={14} minLength={14} name="code" onChange={changeManualCode} pattern="[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}" placeholder="K7PX-4M2Q-W9DN" required spellCheck={false} value={manualCode} /><span className="mt-2 block text-xs text-gate-muted" id="manual-code-format">12 caracteres no formato XXXX-XXXX-XXXX.</span></label>
           {state.kind === "error" ? <p className="border-l-4 border-gate-invalid bg-gate-bg p-4 text-gate-invalid" role="alert">{state.message}</p> : null}
           <button className="bg-gate-valid px-5 py-4 font-semibold text-gate-bg hover:brightness-110 disabled:cursor-wait disabled:opacity-60" disabled={events.length === 0 || state.kind === "submitting"} type="submit">{state.kind === "submitting" ? "Validando…" : "Validar ingresso"}</button>
         </form>
