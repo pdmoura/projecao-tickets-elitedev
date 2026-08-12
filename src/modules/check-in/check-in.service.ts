@@ -2,7 +2,7 @@ import "server-only";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { getGateAdmissionState, EventNotFoundError } from "@/modules/events";
+import { EventNotFoundError } from "@/modules/events";
 import {
   hashValidationToken,
   normalizeManualCode,
@@ -22,7 +22,6 @@ import type {
   ManualCheckInInput,
   QrCheckInInput,
 } from "./check-in.types";
-import { EventExpiredError, EventNotStartedError } from "./check-in.errors";
 
 function ticketPresentation(ticket: TicketForCheckIn) {
   return {
@@ -41,14 +40,6 @@ export function createCheckInService(database: PrismaClient = db) {
     const event = await getCheckInEvent(database, eventId);
     if (!event) {
       throw new EventNotFoundError();
-    }
-
-    const gateState = getGateAdmissionState(event.startsAt);
-    if (gateState === "NOT_STARTED") {
-      throw new EventNotStartedError();
-    }
-    if (gateState === "EXPIRED") {
-      throw new EventExpiredError();
     }
 
     if (!ticket) {

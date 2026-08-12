@@ -47,11 +47,10 @@ export function GateCheckIn({ events }: GateCheckInProps) {
   const [state, setState] = useState<SubmissionState>({ kind: "idle" });
   const [eventId, setEventId] = useState(events[0]?.id ?? "");
   const selectedEvent = events.find((event) => event.id === eventId);
-  const isSessionAvailable = selectedEvent?.gateState === "ACTIVE";
   const sessionMessage = selectedEvent?.gateState === "NOT_STARTED"
-    ? { title: "Sessão ainda não iniciada", body: "A validação estará disponível a partir do horário da sessão." }
+    ? { title: "Sessão futura", body: "A validação de ingressos continua disponível para esta sessão." }
     : selectedEvent?.gateState === "EXPIRED"
-      ? { title: "Sessão encerrada", body: "Esta sessão já terminou. Novas entradas não podem ser registradas." }
+      ? { title: "Sessão encerrada", body: "A validação de ingressos continua disponível para esta sessão." }
       : null;
 
   async function submitCredential(endpoint: "/api/check-in/manual" | "/api/check-in/qr", credential: Record<string, string>) {
@@ -83,16 +82,16 @@ export function GateCheckIn({ events }: GateCheckInProps) {
       <div>
         <label className="block border border-gate-border bg-gate-surface p-5 text-sm font-medium sm:p-6"><span>Sessão em validação</span><select className="mt-3 w-full border border-gate-border bg-gate-bg px-4 py-4 text-gate-text" disabled={events.length === 0 || state.kind === "submitting"} onChange={(event) => setEventId(event.target.value)} value={eventId}>{events.map((event) => <option key={event.id} value={event.id}>{event.movie.title} · {event.roomName} · {formatEventDate(event.startsAt)}</option>)}</select></label>
         {sessionMessage ? <section className="mt-6 border border-gate-border bg-gate-surface p-6 text-center"><p className="font-code text-xs uppercase tracking-[0.16em] text-gate-used">{sessionMessage.title}</p><p className="mt-3 text-sm leading-6 text-gate-muted">{sessionMessage.body}</p></section> : null}
-        {events.length === 0 ? <p className="mt-6 border border-gate-border bg-gate-surface p-5 text-gate-muted">Não há sessões publicadas disponíveis para validação.</p> : <div className="mt-6"><QrCameraScanner disabled={state.kind === "submitting" || !isSessionAvailable} onToken={(token) => submitCredential("/api/check-in/qr", { token })} /></div>}
+        {events.length === 0 ? <p className="mt-6 border border-gate-border bg-gate-surface p-5 text-gate-muted">Não há sessões publicadas disponíveis para validação.</p> : <div className="mt-6"><QrCameraScanner disabled={state.kind === "submitting"} onToken={(token) => submitCredential("/api/check-in/qr", { token })} /></div>}
       </div>
       <section className="border border-gate-border bg-gate-surface p-6 sm:p-8" aria-labelledby="manual-title">
         <p className="font-code text-xs uppercase tracking-[0.16em] text-gate-valid">Alternativa manual</p>
         <h1 className="mt-3 font-display text-4xl leading-none sm:text-5xl" id="manual-title">Digitar código</h1>
         <p className="mt-4 text-sm leading-6 text-gate-muted">A leitura manual está sempre disponível quando a câmera não puder ser usada.</p>
         <form className="mt-8 grid gap-6" onSubmit={submitManualCode}>
-          <label><span className="text-sm font-medium">Código manual do ingresso</span><input autoComplete="off" autoFocus className="mt-2 w-full border border-gate-border bg-gate-bg px-4 py-4 font-code text-lg uppercase tracking-[0.12em] text-gate-text placeholder:text-gate-muted" disabled={events.length === 0 || state.kind === "submitting" || !isSessionAvailable} inputMode="text" maxLength={20} name="code" placeholder="K7PX-4M2Q-W9DN" required spellCheck={false} /></label>
+          <label><span className="text-sm font-medium">Código manual do ingresso</span><input autoComplete="off" autoFocus className="mt-2 w-full border border-gate-border bg-gate-bg px-4 py-4 font-code text-lg uppercase tracking-[0.12em] text-gate-text placeholder:text-gate-muted" disabled={events.length === 0 || state.kind === "submitting"} inputMode="text" maxLength={20} name="code" placeholder="K7PX-4M2Q-W9DN" required spellCheck={false} /></label>
           {state.kind === "error" ? <p className="border-l-4 border-gate-invalid bg-gate-bg p-4 text-gate-invalid" role="alert">{state.message}</p> : null}
-          <button className="bg-gate-valid px-5 py-4 font-semibold text-gate-bg hover:brightness-110 disabled:cursor-wait disabled:opacity-60" disabled={events.length === 0 || state.kind === "submitting" || !isSessionAvailable} type="submit">{state.kind === "submitting" ? "Validando…" : "Validar ingresso"}</button>
+          <button className="bg-gate-valid px-5 py-4 font-semibold text-gate-bg hover:brightness-110 disabled:cursor-wait disabled:opacity-60" disabled={events.length === 0 || state.kind === "submitting"} type="submit">{state.kind === "submitting" ? "Validando…" : "Validar ingresso"}</button>
         </form>
       </section>
     </section>

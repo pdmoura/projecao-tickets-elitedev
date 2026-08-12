@@ -218,3 +218,21 @@ Usar Prisma para persistência normal. Se um update condicional crítico/invaria
 
 ### Por quê
 O requisito é que assentos/ingressos permaneçam corretos sob concorrência, e não que toda instrução seja gerada pelo ORM.
+
+---
+
+## ADR-013 — Janela de venda separada da admissão na portaria
+
+**Status:** Aceita
+
+### Decisão
+
+A janela de venda termina em `startsAt`: somente sessões publicadas futuras podem ser compradas. A Portaria não usa `startsAt` como janela de admissão; qualquer sessão `PUBLISHED` selecionada pode validar ingressos.
+
+### Por quê
+
+O modelo atual não possui uma janela de admissão configurável. Usar `startsAt` para bloquear a Portaria impediria validações legítimas — inclusive a demonstração imediata do fluxo hospedado — sem representar uma regra operacional real.
+
+### Evolução futura
+
+Uma evolução de domínio pode adicionar `admissionStartsAt` e `admissionEndsAt` para configurar explicitamente a janela de admissão.

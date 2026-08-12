@@ -89,10 +89,6 @@ async function buyTicket(
   };
 
   expect(response.status).toBe(201);
-  await db.event.update({
-    data: { startsAt: new Date(Date.now() - 60_000) },
-    where: { id: eventId },
-  });
   return db.ticket.findUniqueOrThrow({ where: { id: payload.tickets[0]!.id } });
 }
 
@@ -221,10 +217,6 @@ describe("atomic gate check-in", () => {
   it("audits unknown token and code as INVALID without a ticket", async () => {
     const gateCookie = await signIn("portaria@projecao.local");
     const eventId = "seed-event-spirited-away";
-    await db.event.update({
-      data: { startsAt: new Date(Date.now() - 60_000) },
-      where: { id: eventId },
-    });
     const qrResponse = await postQr(gateCookie, {
       eventId,
       token: Buffer.alloc(32, 19).toString("base64url"),
@@ -262,22 +254,25 @@ describe("atomic gate check-in", () => {
     await expect(db.ticketValidation.count()).resolves.toBe(0);
   });
 
-  it("rejects gate validation before the start and after the local-day admission window", async () => {
+  it("validates an unused ticket from a past published session", async () => {
+    const customerCookie = await signIn("cliente1@projecao.local");
     const gateCookie = await signIn("portaria@projecao.local");
-    const eventId = "seed-event-spirited-away";
-
-    const notStarted = await postManual(gateCookie, { code: "ZZZZ-ZZZZ-ZZZZ", eventId });
-    expect(notStarted.status).toBe(409);
-    await expect(notStarted.json()).resolves.toMatchObject({ error: { code: "EVENT_NOT_STARTED" } });
-
+    const ticket = await buyTicket(customerCookie);
     await db.event.update({
-      data: { startsAt: new Date("2026-08-10T23:00:00.000Z") },
-      where: { id: eventId },
+      data: { startsAt: new Date(Date.now() - 60_000) },
+      where: { id: ticket.eventId },
     });
-    const expired = await postManual(gateCookie, { code: "ZZZZ-ZZZZ-ZZZZ", eventId });
-    expect(expired.status).toBe(409);
-    await expect(expired.json()).resolves.toMatchObject({ error: { code: "EVENT_EXPIRED" } });
-    await expect(db.ticketValidation.count()).resolves.toBe(0);
+
+    const response = await postManual(gateCookie, {
+      code: ticket.manualCode,
+      eventId: ticket.eventId,
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ result: "VALID" });
+    await expect(db.ticket.findUniqueOrThrow({ where: { id: ticket.id } })).resolves.toMatchObject({
+      usedAt: expect.any(Date),
+    });
   });
 
   it("returns and audits WRONG_EVENT without consuming the ticket", async () => {

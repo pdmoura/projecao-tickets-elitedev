@@ -4,7 +4,7 @@ import {
   AuthenticationError,
   AuthorizationError,
 } from "@/modules/auth";
-import { CheckInValidationError, EventExpiredError, EventNotStartedError } from "@/modules/check-in";
+import { CheckInValidationError } from "@/modules/check-in";
 import { EventNotFoundError } from "@/modules/events";
 
 export async function readCheckInBody(request: Request): Promise<unknown> {
@@ -20,8 +20,6 @@ export function checkInErrorResponse(error: unknown): NextResponse {
     error instanceof AuthenticationError ||
     error instanceof AuthorizationError ||
     error instanceof CheckInValidationError ||
-    error instanceof EventExpiredError ||
-    error instanceof EventNotStartedError ||
     error instanceof EventNotFoundError
   ) {
     return NextResponse.json(

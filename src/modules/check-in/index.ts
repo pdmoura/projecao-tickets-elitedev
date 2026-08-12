@@ -1,6 +1,6 @@
 import "server-only";
 
-export { CheckInValidationError, EventExpiredError, EventNotStartedError } from "./check-in.errors";
+export { CheckInValidationError } from "./check-in.errors";
 export {
   parseManualCheckInInput,
   parseQrCheckInInput,
