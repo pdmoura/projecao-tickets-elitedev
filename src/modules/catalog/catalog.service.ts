@@ -163,7 +163,7 @@ export function createCatalogService(client: TmdbClient = createTmdbClient()) {
         language: "pt-BR",
         page: String(page),
         query,
-      });
+      }, { operation: "search" });
 
       if (!isRecord(response) || !Array.isArray(response.results)) {
         throw new CatalogUnavailableError();
@@ -180,7 +180,11 @@ export function createCatalogService(client: TmdbClient = createTmdbClient()) {
     },
 
     async getMovieDetails(movieId: number): Promise<CatalogMovieDetails> {
-      const response = await client.get(`/movie/${movieId}`, { language: "pt-BR" });
+      const response = await client.get(
+        `/movie/${movieId}`,
+        { language: "pt-BR" },
+        { operation: "details" },
+      );
 
       return normalizeMovieDetails(response);
     },
@@ -188,7 +192,7 @@ export function createCatalogService(client: TmdbClient = createTmdbClient()) {
     async getMovieVideos(movieId: number): Promise<CatalogMovieVideos> {
       const response = await client.get(`/movie/${movieId}/videos`, {
         language: "pt-BR",
-      });
+      }, { operation: "videos" });
 
       if (!isRecord(response)) {
         throw new CatalogUnavailableError();

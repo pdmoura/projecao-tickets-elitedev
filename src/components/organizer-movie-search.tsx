@@ -2,24 +2,37 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 
 import type {
   CatalogMovie,
   CatalogMovieDetails,
   CatalogMovieVideos,
 } from "@/modules/catalog/catalog.types";
+import {
+  canSearchCatalog,
+  createSearchRequestTracker,
+  normalizeCatalogQuery,
+} from "@/modules/catalog/organizer-search";
+import {
+  loadMovieSelection,
+  type MovieSelection,
+} from "@/modules/catalog/movie-selection";
 
 type SearchState =
   | { kind: "idle" }
   | { kind: "loading" }
   | { items: CatalogMovie[]; kind: "results" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; query: string };
 
-type SelectedMovie = {
-  details: CatalogMovieDetails;
-  trailer: CatalogMovieVideos["trailer"];
+type SelectionError = {
+  movie: CatalogMovie;
 };
+
+type SelectedMovie = MovieSelection;
+
+const searchDebounceMs = 400;
 
 function getErrorMessage(payload: unknown, fallback: string): string {
   if (
@@ -37,8 +50,12 @@ function getErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, signal ? { signal } : undefined);
   const payload: unknown = await response.json();
 
   if (!response.ok) {
@@ -48,55 +65,161 @@ async function getJson<T>(url: string): Promise<T> {
   return payload as T;
 }
 
+function SearchSkeletons() {
+  return (
+    <div aria-label="Carregando resultados" className="mt-10 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-5" role="status">
+      {Array.from({ length: 6 }, (_, index) => (
+        <div className="animate-pulse" key={index}>
+          <div className="aspect-[2/3] border border-rule bg-surface-secondary" />
+          <div className="mt-3 h-6 w-4/5 bg-surface-secondary" />
+          <div className="mt-2 h-3 w-1/3 bg-surface-secondary" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function OrganizerMovieSearch() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [searchState, setSearchState] = useState<SearchState>({ kind: "idle" });
+  const [isSearchRequestActive, setIsSearchRequestActive] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState<SelectedMovie | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [loadingMovieId, setLoadingMovieId] = useState<number | null>(null);
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
-  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<SelectionError | null>(null);
+  const closeDialogButtonRef = useRef<HTMLButtonElement | null>(null);
+  const searchAbortControllerRef = useRef<AbortController | null>(null);
+  const searchCacheRef = useRef(new Map<string, CatalogMovie[]>());
+  const searchRequestTrackerRef = useRef(createSearchRequestTracker());
 
-  async function searchMovies(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const normalizedQuery = query.trim();
+  function closeSelectedMovie() {
+    setSelectedMovie(null);
+  }
 
-    if (!normalizedQuery) {
-      setSearchState({ kind: "error", message: "Informe um título para buscar." });
+  useEffect(() => {
+    if (!selectedMovie) {
       return;
     }
 
-    setSearchState({ kind: "loading" });
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+    closeDialogButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeSelectedMovie();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
+    };
+  }, [selectedMovie]);
+
+  const searchMovies = useDebouncedCallback(async (rawQuery: string) => {
+    const normalizedQuery = normalizeCatalogQuery(rawQuery);
+    const requestId = searchRequestTrackerRef.current.begin();
+
+    searchAbortControllerRef.current?.abort();
+    searchAbortControllerRef.current = null;
+
+    if (!canSearchCatalog(normalizedQuery)) {
+      setIsSearchRequestActive(false);
+      setSearchState({ kind: "idle" });
+      return;
+    }
+
+    const cachedItems = searchCacheRef.current.get(normalizedQuery);
+
+    if (cachedItems) {
+      setIsSearchRequestActive(false);
+      setSearchState({ items: cachedItems, kind: "results" });
+      return;
+    }
+
+    const abortController = new AbortController();
+    searchAbortControllerRef.current = abortController;
+    setIsSearchRequestActive(true);
+    setSearchState((currentState) =>
+      currentState.kind === "results" ? currentState : { kind: "loading" },
+    );
 
     try {
       const result = await getJson<{ items: CatalogMovie[] }>(
-        `/api/catalog/movies?query=${encodeURIComponent(normalizedQuery)}`,
+        `/api/catalog/movies?query=${encodeURIComponent(rawQuery.trim())}`,
+        abortController.signal,
       );
+
+      if (!searchRequestTrackerRef.current.isCurrent(requestId)) {
+        return;
+      }
+
+      searchCacheRef.current.set(normalizedQuery, result.items);
       setSearchState({ items: result.items, kind: "results" });
     } catch (error) {
-      setSearchState({
-        kind: "error",
-        message: error instanceof Error ? error.message : "Não foi possível consultar o catálogo.",
-      });
+      if (isAbortError(error) || !searchRequestTrackerRef.current.isCurrent(requestId)) {
+        return;
+      }
+
+      setSearchState((currentState) =>
+        currentState.kind === "results" ? currentState : { kind: "error", query: rawQuery.trim() },
+      );
+    } finally {
+      if (searchRequestTrackerRef.current.isCurrent(requestId)) {
+        setIsSearchRequestActive(false);
+      }
     }
+  }, searchDebounceMs);
+
+  useEffect(() => {
+    return () => {
+      searchMovies.cancel();
+      searchAbortControllerRef.current?.abort();
+    };
+  }, [searchMovies]);
+
+  function handleQueryChange(value: string) {
+    searchRequestTrackerRef.current.begin();
+    searchAbortControllerRef.current?.abort();
+    searchAbortControllerRef.current = null;
+    setIsSearchRequestActive(false);
+    setQuery(value);
+    searchMovies(value);
+  }
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    searchMovies.flush();
   }
 
   async function selectMovie(movie: CatalogMovie) {
-    setIsLoadingDetails(true);
+    if (loadingMovieId !== null) {
+      return;
+    }
+
+    setLoadingMovieId(movie.externalId);
+    setCreationError(null);
     setSelectionError(null);
 
     try {
-      const [details, videos] = await Promise.all([
-        getJson<CatalogMovieDetails>(`/api/catalog/movies/${movie.externalId}`),
-        getJson<CatalogMovieVideos>(`/api/catalog/movies/${movie.externalId}/videos`),
-      ]);
-      setSelectedMovie({ details, trailer: videos.trailer });
-    } catch (error) {
-      setSelectionError(
-        error instanceof Error ? error.message : "Não foi possível carregar este filme.",
-      );
+      const selection = await loadMovieSelection({
+        getDetails: () =>
+          getJson<CatalogMovieDetails>(`/api/catalog/movies/${movie.externalId}`),
+        getVideos: () =>
+          getJson<CatalogMovieVideos>(
+            `/api/catalog/movies/${movie.externalId}/videos`,
+          ),
+      });
+      setSelectedMovie(selection);
+    } catch {
+      setSelectionError({ movie });
     } finally {
-      setIsLoadingDetails(false);
+      setLoadingMovieId(null);
     }
   }
 
@@ -106,6 +229,7 @@ export function OrganizerMovieSearch() {
     }
 
     setIsCreatingDraft(true);
+    setCreationError(null);
     setSelectionError(null);
 
     try {
@@ -123,13 +247,17 @@ export function OrganizerMovieSearch() {
       router.push(`/organizer/events/${String(payload.id)}`);
       router.refresh();
     } catch (error) {
-      setSelectionError(
+      setCreationError(
         error instanceof Error ? error.message : "Não foi possível criar o rascunho.",
       );
     } finally {
       setIsCreatingDraft(false);
     }
   }
+
+  const isInitialLoading = searchState.kind === "loading";
+  const isRefreshing =
+    searchState.kind === "results" && (isSearchRequestActive || searchMovies.isPending());
 
   return (
     <section aria-labelledby="movie-search-title" className="py-10 sm:py-14">
@@ -143,59 +271,92 @@ export function OrganizerMovieSearch() {
         Confirme os detalhes e o trailer antes de configurar a nova sessão.
       </p>
 
-      <form className="mt-9 max-w-3xl" onSubmit={searchMovies}>
+      <form className="mt-9 max-w-3xl" onSubmit={submitSearch}>
         <label className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted" htmlFor="movie-query">
           Buscar filmes no TMDb
         </label>
         <div className="mt-2 flex border border-rule bg-surface">
           <input
+            autoComplete="off"
             className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm outline-none"
             id="movie-query"
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => handleQueryChange(event.target.value)}
             placeholder="Título, palavra-chave ou nome original"
             type="search"
             value={query}
           />
           <button
             className="bg-accent px-5 text-sm font-semibold text-ink hover:bg-accent-hover disabled:opacity-60"
-            disabled={searchState.kind === "loading"}
+            disabled={!canSearchCatalog(query)}
             type="submit"
           >
-            {searchState.kind === "loading" ? "Buscando…" : "Buscar"}
+            Buscar
           </button>
         </div>
       </form>
 
-      {searchState.kind === "error" ? (
-        <p className="mt-5 border-l-4 border-error bg-surface p-4 text-sm text-error" role="alert">
-          {searchState.message}
-        </p>
+      <p aria-live="polite" className="mt-4 min-h-5 text-sm text-ink-muted" role="status">
+        {isRefreshing ? "Atualizando resultados…" : ""}
+      </p>
+
+      {searchState.kind === "idle" ? (
+        <p className="mt-6 text-ink-muted">Busque um filme para começar.</p>
       ) : null}
 
-      {isLoadingDetails ? (
+      {isInitialLoading ? <SearchSkeletons /> : null}
+
+      {searchState.kind === "error" ? (
+        <div className="mt-6 border-l-4 border-warning bg-surface p-4" role="status">
+          <p className="text-sm text-ink">Não conseguimos consultar a TMDb agora.</p>
+          <button
+            className="mt-3 text-sm font-semibold underline decoration-warning decoration-2 underline-offset-4"
+            onClick={() => searchMovies(searchState.query)}
+            type="button"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
+      {loadingMovieId !== null ? (
         <p className="mt-8 font-code text-xs uppercase tracking-[0.14em] text-ink-muted" role="status">
           Carregando detalhes do filme…
         </p>
       ) : null}
 
       {selectionError ? (
+        <div className="mt-5 border-l-4 border-error bg-surface p-4" role="alert">
+          <p className="text-sm text-error">Não foi possível carregar os detalhes deste filme.</p>
+          <button
+            className="mt-3 text-sm font-semibold underline decoration-error decoration-2 underline-offset-4"
+            disabled={loadingMovieId !== null}
+            onClick={() => selectMovie(selectionError.movie)}
+            type="button"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      ) : null}
+
+      {creationError ? (
         <p className="mt-5 border-l-4 border-error bg-surface p-4 text-sm text-error" role="alert">
-          {selectionError}
+          {creationError}
         </p>
       ) : null}
 
       {searchState.kind === "results" ? (
         searchState.items.length === 0 ? (
           <div className="mt-10 border-y border-rule py-12 text-center">
-            <h2 className="font-display text-3xl">Nenhum filme encontrado</h2>
-            <p className="mt-3 text-ink-muted">Tente outro título ou termo de busca.</p>
+            <h2 className="font-display text-3xl">Nenhum filme encontrado para “{query.trim()}”</h2>
+            <p className="mt-3 text-ink-muted">Tente outro título ou termo.</p>
           </div>
         ) : (
           <ul className="mt-10 grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-5" role="list">
             {searchState.items.map((movie) => (
               <li key={movie.externalId}>
                 <button
-                  className="group block w-full text-left"
+                  className="group block w-full text-left disabled:cursor-wait disabled:opacity-60"
+                  disabled={loadingMovieId !== null}
                   onClick={() => selectMovie(movie)}
                   type="button"
                 >
@@ -229,7 +390,8 @@ export function OrganizerMovieSearch() {
               <button
                 aria-label="Fechar detalhes do filme"
                 className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted underline"
-                onClick={() => setSelectedMovie(null)}
+                onClick={closeSelectedMovie}
+                ref={closeDialogButtonRef}
                 type="button"
               >
                 Fechar
@@ -271,7 +433,7 @@ export function OrganizerMovieSearch() {
                 />
               ) : (
                 <p className="mt-3 border-l-4 border-warning bg-surface p-4 text-sm text-ink-muted">
-                  Não há trailer disponível para este filme. Você ainda pode usar este filme na sessão.
+                  Trailer indisponível. Você ainda pode usar este filme na sessão.
                 </p>
               )}
             </section>
@@ -279,7 +441,7 @@ export function OrganizerMovieSearch() {
             <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 className="border border-rule px-5 py-3 text-sm font-semibold text-ink hover:bg-surface-secondary"
-                onClick={() => setSelectedMovie(null)}
+                onClick={closeSelectedMovie}
                 type="button"
               >
                 Escolher outro filme

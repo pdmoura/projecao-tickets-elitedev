@@ -87,6 +87,10 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function testLogger() {
+  return { info: vi.fn(), warn: vi.fn() };
+}
+
 describe("TMDb catalog", () => {
   it("searches and normalizes movies with pt-BR and the approved poster fallback", async () => {
     const { catalog, fetchMock } = catalogWithResponse(
@@ -130,6 +134,7 @@ describe("TMDb catalog", () => {
     expect(new Headers(init?.headers).get("authorization")).toBe(
       "Bearer tmdb-test-token",
     );
+    expect(new URL(String(input)).pathname).toBe("/3/search/movie");
   });
 
   it("normalizes movie details without exposing the external response", async () => {
@@ -241,6 +246,160 @@ describe("TMDb catalog", () => {
       code: "CATALOG_UNAVAILABLE",
       status: 503,
     });
+  });
+
+  it("retries a transient details failure once and succeeds without logging credentials", async () => {
+    const logger = testLogger();
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({ status_message: "Unavailable" }, 503))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          genres: [],
+          id: 157336,
+          overview: "Uma viagem interestelar.",
+          poster_path: null,
+          title: "Interestelar",
+        }),
+      );
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger,
+        sleepFn: vi.fn(async () => {}),
+      }),
+    );
+
+    await expect(catalog.getMovieDetails(157336)).resolves.toMatchObject({
+      externalId: 157336,
+      title: "Interestelar",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "TMDb request failed operation=details path=/movie/157336 attempt=1/2 status=503",
+    );
+    expect(logger.warn.mock.calls.flat().join(" ")).not.toContain("tmdb-test-token");
+  });
+
+  it.each([401, 404])("does not retry a non-transient %i details failure", async (status) => {
+    const fetchMock = createFetchMock(jsonResponse({ status_message: "No" }, status));
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger: testLogger(),
+        sleepFn: vi.fn(async () => {}),
+      }),
+    );
+
+    await expect(catalog.getMovieDetails(157336)).rejects.toMatchObject({
+      code: "CATALOG_UNAVAILABLE",
+      status: 503,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns the stable error after a second transient details failure", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValue(jsonResponse({ status_message: "Unavailable" }, 503));
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger: testLogger(),
+        sleepFn: vi.fn(async () => {}),
+      }),
+    );
+
+    await expect(catalog.getMovieDetails(157336)).rejects.toMatchObject({
+      code: "CATALOG_UNAVAILABLE",
+      status: 503,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries search twice before recovering from transient failures", async () => {
+    const logger = testLogger();
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({}, 503))
+      .mockRejectedValueOnce(new TypeError("network down"))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          page: 1,
+          results: [
+            {
+              id: 42,
+              overview: "Uma história.",
+              poster_path: null,
+              release_date: "2026-01-01",
+              title: "Filme de teste",
+            },
+          ],
+          total_pages: 1,
+        }),
+      );
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger,
+        searchRetryDelaysMs: [300, 700],
+        sleepFn: vi.fn(async () => {}),
+      }),
+    );
+
+    await expect(catalog.searchMovies("filme")).resolves.toMatchObject({
+      items: [{ externalId: 42 }],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "TMDb request failed operation=search path=/search/movie attempt=1/3 status=503",
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      "TMDb request failed operation=search path=/search/movie attempt=2/3 reason=network_error",
+    );
+    expect(logger.info).toHaveBeenCalledWith(
+      "TMDb request recovered operation=search attempt=3/3",
+    );
+  });
+
+  it("returns the stable error only after all three search attempts fail", async () => {
+    const fetchMock = vi
+      .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
+      .mockResolvedValue(jsonResponse({}, 503));
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger: testLogger(),
+        sleepFn: vi.fn(async () => {}),
+      }),
+    );
+
+    await expect(catalog.searchMovies("filme")).rejects.toMatchObject({
+      code: "CATALOG_UNAVAILABLE",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([401, 404])("does not retry a non-transient %i search failure", async (status) => {
+    const fetchMock = createFetchMock(jsonResponse({}, status));
+    const catalog = createCatalogService(
+      createTmdbClient({
+        accessToken: "tmdb-test-token",
+        fetchFn: fetchMock,
+        logger: testLogger(),
+        sleepFn: vi.fn(async () => {}),
+      }),
+    );
+
+    await expect(catalog.searchMovies("filme")).rejects.toMatchObject({
+      code: "CATALOG_UNAVAILABLE",
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects catalog access for a non-organizer before calling the service", async () => {
