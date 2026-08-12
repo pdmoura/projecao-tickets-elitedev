@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 import { AvailabilityToast } from "@/components/availability-toast";
 import { formatCardExpiry } from "@/modules/checkout/expiry-format";
@@ -9,6 +9,13 @@ import {
   formatSeatsUnavailableMessage,
   resolveUnavailableSeatLabels,
 } from "@/modules/seats/seat-messages";
+
+import {
+  digitsOnly,
+  formatCardNumber,
+  type CheckoutFieldErrors,
+  validateCheckoutFields,
+} from "./checkout-input-format";
 
 type CheckoutFormProps = {
   eventId: string;
@@ -29,25 +36,38 @@ type CheckoutError = {
 
 export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
   const [state, setState] = useState<CheckoutState>({ kind: "idle" });
+  const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<CheckoutFieldErrors>({});
   const [seatConflictMessage, setSeatConflictMessage] = useState<string | null>(
     null,
   );
+  const cardNumberRef = useRef<HTMLInputElement>(null);
+  const expiryRef = useRef<HTMLInputElement>(null);
+  const cvvRef = useRef<HTMLInputElement>(null);
   const seatIds = seats.map((seat) => seat.id);
 
   async function submitCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const errors = validateCheckoutFields({ cardNumber, cvv, expiry });
+    setFieldErrors(errors);
+
+    if (errors.cardNumber || errors.expiry || errors.cvv) {
+      (errors.cardNumber ? cardNumberRef : errors.expiry ? expiryRef : cvvRef).current?.focus();
+      return;
+    }
+
     setState({ kind: "submitting" });
     setSeatConflictMessage(null);
 
-    const formData = new FormData(event.currentTarget);
     const response = await fetch("/api/checkout", {
       body: JSON.stringify({
         eventId,
         payment: {
-          cardNumber: formData.get("cardNumber"),
-          cvv: formData.get("cvv"),
-          expiry: formData.get("expiry"),
+          cardNumber: digitsOnly(cardNumber, 16),
+          cvv,
+          expiry,
           method: "SIMULATED_CARD",
         },
         seatIds,
@@ -81,7 +101,10 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
     setState({
       code,
       kind: "error",
-      message: error?.message ?? "Não foi possível concluir a compra.",
+      message:
+        code === "PAYMENT_DECLINED"
+          ? "O pagamento de teste foi recusado. Use outro cartão para continuar."
+          : error?.message ?? "Não foi possível concluir a compra.",
     });
   }
 
@@ -108,7 +131,7 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
 
   return (
     <>
-      <form className="mt-8 border border-rule bg-surface p-5" onSubmit={submitCheckout}>
+      <form className="mt-8 border border-rule bg-surface p-5 sm:p-7" noValidate onSubmit={submitCheckout}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-3xl">Pagamento de teste</h2>
@@ -129,38 +152,53 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
             <span className="text-sm font-medium">Número do cartão</span>
             <input
               autoComplete="cc-number"
-              className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm"
+              aria-describedby={fieldErrors.cardNumber ? "card-number-error" : undefined}
+              aria-invalid={Boolean(fieldErrors.cardNumber)}
+              className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm aria-invalid:border-error"
               inputMode="numeric"
+              maxLength={19}
               name="cardNumber"
+              onChange={(input) => setCardNumber(formatCardNumber(input.target.value))}
               placeholder="4242 4242 4242 4242"
-              required
+              ref={cardNumberRef}
+              value={cardNumber}
             />
+            {fieldErrors.cardNumber ? <p className="mt-2 text-sm text-error" id="card-number-error">{fieldErrors.cardNumber}</p> : null}
           </label>
           <label>
             <span className="text-sm font-medium">Validade</span>
             <input
               autoComplete="cc-exp"
-              className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm"
+              aria-describedby={fieldErrors.expiry ? "expiry-error" : undefined}
+              aria-invalid={Boolean(fieldErrors.expiry)}
+              className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm aria-invalid:border-error"
               inputMode="numeric"
               maxLength={5}
               name="expiry"
               onChange={(input) => setExpiry(formatCardExpiry(input.target.value))}
               placeholder="12/30"
-              required
+              ref={expiryRef}
               value={expiry}
             />
+            {fieldErrors.expiry ? <p className="mt-2 text-sm text-error" id="expiry-error">{fieldErrors.expiry}</p> : null}
           </label>
           <label>
             <span className="text-sm font-medium">CVV</span>
             <input
               autoComplete="cc-csc"
-              className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm"
+              aria-describedby={fieldErrors.cvv ? "cvv-error" : undefined}
+              aria-invalid={Boolean(fieldErrors.cvv)}
+              className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm aria-invalid:border-error"
               inputMode="numeric"
+              maxLength={3}
               name="cvv"
+              onChange={(input) => setCvv(digitsOnly(input.target.value, 3))}
               placeholder="123"
-              required
+              ref={cvvRef}
               type="password"
+              value={cvv}
             />
+            {fieldErrors.cvv ? <p className="mt-2 text-sm text-error" id="cvv-error">{fieldErrors.cvv}</p> : null}
           </label>
         </div>
         {state.kind === "error" && state.code !== "SEAT_UNAVAILABLE" ? (

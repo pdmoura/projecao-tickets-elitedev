@@ -52,7 +52,7 @@ describe("published events and seats", () => {
         db.event.count(),
         db.eventSeat.count(),
       ]),
-    ).resolves.toEqual([4, 4, 73]);
+    ).resolves.toEqual([9, 9, 198]);
   });
 
   it("exposes only future published events and searches their snapshot titles", async () => {
@@ -60,8 +60,13 @@ describe("published events and seats", () => {
     const searchResults = await listPublishedEvents("PARIS");
 
     expect(events.map((event) => event.id)).toEqual([
+      "seed-event-parasite",
+      "seed-event-your-name",
       "seed-event-spirited-away",
+      "seed-event-la-la-land",
       "seed-event-paris-texas",
+      "seed-event-grave-of-the-fireflies",
+      "seed-event-forrest-gump",
     ]);
     expect(searchResults.map((event) => event.movie.title)).toEqual(["Paris, Texas"]);
     await expect(getPublishedEvent("seed-event-draft")).rejects.toBeInstanceOf(
@@ -82,8 +87,8 @@ describe("published events and seats", () => {
     await expect(getPublishedEvent("seed-event-spirited-away")).resolves.toMatchObject({
       movie: {
         overview: expect.stringContaining("espíritos"),
-        posterPath: "/placeholders/poster-unavailable.png",
-        title: "A Viagem de Chihiro",
+        posterPath: "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+        title: "Spirited Away",
       },
     });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -107,7 +112,7 @@ describe("published events and seats", () => {
 
   it("serves public event and seat contracts", async () => {
     const listResponse = await getEventsRoute(
-      new Request("http://localhost:3000/api/events?search=chihiro"),
+      new Request("http://localhost:3000/api/events?search=spirited"),
     );
     const detailResponse = await getEventRoute(
       new Request("http://localhost:3000/api/events/seed-event-spirited-away"),
@@ -122,7 +127,7 @@ describe("published events and seats", () => {
     await expect(listResponse.json()).resolves.toHaveLength(1);
     expect(detailResponse.status).toBe(200);
     await expect(detailResponse.json()).resolves.toMatchObject({
-      movie: { title: "A Viagem de Chihiro" },
+      movie: { title: "Spirited Away" },
     });
     expect(seatsResponse.status).toBe(200);
     await expect(seatsResponse.json()).resolves.toMatchObject({

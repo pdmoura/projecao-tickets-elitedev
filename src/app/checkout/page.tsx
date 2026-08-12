@@ -1,7 +1,10 @@
-import { notFound } from "next/navigation";
+import Image from "next/image";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
 import { CheckoutForm } from "@/components/checkout-form";
+import { getRoleHomePath, getSession } from "@/modules/auth";
 import { formatCurrency, formatEventDate } from "@/modules/events/event-format";
 import { EventNotFoundError, getPublishedEvent } from "@/modules/events";
 import { EventSeatMismatchError, getEventSeatsByIds } from "@/modules/seats";
@@ -31,6 +34,17 @@ async function getCheckoutPageData(eventId: string, seatIds: readonly string[]) 
 }
 
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
+  const request = new Request("http://localhost", { headers: await headers() });
+  const session = await getSession(request);
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  if (session.user.role !== "CUSTOMER") {
+    redirect(getRoleHomePath(session.user.role));
+  }
+
   const resolvedSearchParams = await searchParams;
   const eventId = Array.isArray(resolvedSearchParams.eventId)
     ? resolvedSearchParams.eventId[0]
@@ -50,7 +64,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
 
   return (
       <main className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-[88rem]">
           <AppHeader />
           <section className="py-14">
             <p className="font-code text-xs uppercase tracking-[0.18em] text-accent">
@@ -63,29 +77,17 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
               A disponibilidade será confirmada novamente dentro da transação de
               compra. Sua seleção ainda não representa uma reserva.
             </p>
-            <dl className="mt-10 divide-y divide-rule border-y border-rule bg-surface">
-              <div className="p-5">
-                <dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">
-                  Sessão
-                </dt>
-                <dd className="mt-2 font-display text-3xl">{event.movie.title}</dd>
-                <dd className="mt-2 text-sm text-ink-muted">
-                  {formatEventDate(event.startsAt)}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between gap-4 p-5 text-sm">
-                <dt className="text-ink-muted">Assentos</dt>
-                <dd className="font-medium">{seats.map((seat) => seat.label).join(", ")}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4 p-5">
-                <dt className="font-semibold">Total previsto</dt>
-                <dd className="font-semibold">{formatCurrency(totalCents)}</dd>
-              </div>
-            </dl>
-            <CheckoutForm
-              eventId={event.id}
-              seats={seats.map((seat) => ({ id: seat.id, label: seat.label }))}
-            />
+            <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)] lg:items-start">
+              <article className="grid overflow-hidden border border-rule bg-surface sm:grid-cols-[9rem_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[10rem_minmax(0,1fr)]">
+                <Image alt={`Pôster de ${event.movie.title}`} className="aspect-[2/3] h-full w-full object-cover" height={600} src={event.movie.posterPath} width={400} />
+                <dl className="divide-y divide-rule">
+                  <div className="p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Sessão</dt><dd className="mt-3 font-display text-3xl leading-tight">{event.movie.title}</dd><dd className="mt-3 text-sm leading-6 text-ink-muted">{formatEventDate(event.startsAt)}<br />{event.venueName} · {event.roomName}</dd></div>
+                  <div className="flex items-center justify-between gap-4 p-5 text-sm"><dt className="text-ink-muted">Assentos</dt><dd className="font-medium">{seats.map((seat) => seat.label).join(", ")}</dd></div>
+                  <div className="flex items-center justify-between gap-4 p-5"><dt className="font-semibold">Total previsto</dt><dd className="font-semibold">{formatCurrency(totalCents)}</dd></div>
+                </dl>
+              </article>
+              <CheckoutForm eventId={event.id} seats={seats.map((seat) => ({ id: seat.id, label: seat.label }))} />
+            </div>
           </section>
         </div>
       </main>

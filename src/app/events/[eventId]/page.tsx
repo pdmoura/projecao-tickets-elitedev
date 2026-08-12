@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
@@ -10,6 +12,7 @@ import {
 } from "@/modules/events/event-format";
 import { EventNotFoundError, getPublishedEvent } from "@/modules/events";
 import { getEventSeats } from "@/modules/seats";
+import { getSession } from "@/modules/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +34,8 @@ async function getEventPageData(eventId: string) {
 }
 
 export default async function EventPage({ params, searchParams }: EventPageProps) {
+  const request = new Request("http://localhost", { headers: await headers() });
+  const session = await getSession(request);
   const { eventId } = await params;
   const resolvedSearchParams = await searchParams;
   const [event, seats] = await getEventPageData(eventId);
@@ -39,7 +44,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
 
   return (
       <main className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16">
-        <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-[88rem]">
           <AppHeader />
           <article className="grid gap-8 py-10 md:grid-cols-[minmax(13rem,20rem)_minmax(0,1fr)] md:py-14">
             <Image
@@ -103,12 +108,32 @@ export default async function EventPage({ params, searchParams }: EventPageProps
               </dl>
             </div>
           </article>
-          <SeatMap
-            eventId={event.id}
-            initialSeatConflict={resolvedSearchParams.seatConflict === "1"}
-            priceCents={event.priceCents}
-            seats={seats}
-          />
+          {session?.user.role === "ORGANIZER" ? (
+            <section className="mt-12 border-t border-rule pt-8">
+              <div className="max-w-2xl border-l-4 border-accent bg-surface-secondary p-6 sm:p-7">
+                <p className="font-code text-xs uppercase tracking-[0.16em] text-accent">Acesso de organizador</p>
+                <h2 className="mt-3 font-display text-3xl">Você está acessando como organizador.</h2>
+                <p className="mt-4 leading-7 text-ink-muted">A compra de ingressos está disponível apenas para clientes. Volte às suas sessões para gerenciar a programação.</p>
+                <Link className="mt-6 inline-block bg-accent px-5 py-3 text-sm font-semibold text-ink hover:bg-accent-hover" href="/organizer">Gerenciar sessões</Link>
+              </div>
+            </section>
+          ) : session?.user.role === "GATE" ? (
+            <section className="mt-12 border-t border-rule pt-8">
+              <div className="max-w-2xl border-l-4 border-gate-valid bg-gate-bg p-6 text-gate-text sm:p-7">
+                <p className="font-code text-xs uppercase tracking-[0.14em] text-gate-valid">Acesso de portaria</p>
+                <h2 className="mt-3 font-display text-3xl">Você está acessando como portaria.</h2>
+                <p className="mt-4 leading-7 text-gate-muted">Use a operação de entrada para validar os ingressos desta sessão.</p>
+                <Link className="mt-6 inline-block bg-gate-valid px-5 py-3 text-sm font-semibold text-gate-bg hover:brightness-110" href="/gate">Escanear ingressos</Link>
+              </div>
+            </section>
+          ) : (
+            <SeatMap
+              eventId={event.id}
+              initialSeatConflict={resolvedSearchParams.seatConflict === "1"}
+              priceCents={event.priceCents}
+              seats={seats}
+            />
+          )}
         </div>
       </main>
   );

@@ -42,7 +42,13 @@ function getErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-export function OrganizerEventForm({ event }: { event: OrganizerEvent }) {
+export function OrganizerEventForm({
+  event,
+  venueSuggestions = [],
+}: {
+  event: OrganizerEvent;
+  venueSuggestions?: string[];
+}) {
   const router = useRouter();
   const [venueName, setVenueName] = useState(event.venueName ?? "");
   const [roomName, setRoomName] = useState(event.roomName ?? "");
@@ -130,26 +136,32 @@ export function OrganizerEventForm({ event }: { event: OrganizerEvent }) {
   if (isPublished) {
     return (
       <section className="py-10 sm:py-14">
-        <p className="font-code text-xs uppercase tracking-[0.18em] text-success">Sessão publicada</p>
-        <h1 className="mt-3 font-display text-5xl leading-[0.95]">{event.movie.title}</h1>
-        <p className="mt-5 max-w-2xl leading-7 text-ink-muted">
-          Esta sessão já está na programação e não pode mais ser alterada.
-        </p>
-        <dl className="mt-10 max-w-2xl divide-y divide-rule border-y border-rule bg-surface">
-          <div className="p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Quando</dt><dd className="mt-2 font-medium">{event.startsAt ? formatEventDate(event.startsAt) : "—"}</dd></div>
-          <div className="p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Onde</dt><dd className="mt-2 font-medium">{event.venueName} · {event.roomName}</dd></div>
-          <div className="p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Capacidade</dt><dd className="mt-2 font-medium">{event.capacity} lugares</dd></div>
-        </dl>
-        <Link className="mt-8 inline-block bg-accent px-5 py-3 text-sm font-semibold text-ink hover:bg-accent-hover" href="/organizer">
-          Voltar para minhas sessões
-        </Link>
+        <div className="grid gap-8 lg:grid-cols-[minmax(14rem,22rem)_minmax(0,1fr)] lg:items-start">
+          <Image alt={`Pôster de ${event.movie.title}`} className="aspect-[2/3] w-full border border-rule object-cover" height={900} priority src={event.movie.posterPath} width={600} />
+          <div>
+            <p className="font-code text-xs uppercase tracking-[0.18em] text-success">Sessão publicada</p>
+            <h1 className="mt-3 font-display text-5xl leading-[0.95] text-balance sm:text-6xl">{event.movie.title}</h1>
+            <p className="mt-5 max-w-2xl leading-7 text-ink-muted">
+              Esta sessão já está na programação e não pode mais ser alterada.
+            </p>
+            <dl className="mt-8 grid gap-px border border-rule bg-rule sm:grid-cols-2">
+              <div className="bg-surface p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Quando</dt><dd className="mt-2 font-medium">{event.startsAt ? formatEventDate(event.startsAt) : "—"}</dd></div>
+              <div className="bg-surface p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Onde</dt><dd className="mt-2 font-medium">{event.venueName} · {event.roomName}</dd></div>
+              <div className="bg-surface p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Capacidade</dt><dd className="mt-2 font-medium">{event.capacity} lugares</dd></div>
+              <div className="bg-surface p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Valor</dt><dd className="mt-2 font-medium">{event.priceCents === null ? "—" : formatCurrency(event.priceCents)}</dd></div>
+            </dl>
+            <Link className="mt-8 inline-block bg-accent px-5 py-3 text-sm font-semibold text-ink hover:bg-accent-hover" href="/organizer">
+              Voltar para minhas sessões
+            </Link>
+          </div>
+        </div>
       </section>
     );
   }
 
   return (
     <section className="py-10 sm:py-14">
-      <p className="font-code text-xs uppercase tracking-[0.2em] text-accent">Nova sessão · etapas 2 e 3 de 3</p>
+      <p className="inline-flex bg-ink px-3 py-1.5 font-code text-[0.7rem] font-medium uppercase tracking-[0.12em] text-accent">Nova sessão · etapas 2 e 3 de 3</p>
       <h1 className="mt-3 font-display text-5xl leading-[0.95]">Configure, revise e publique</h1>
       <p className="mt-5 max-w-2xl leading-7 text-ink-muted">
         O rascunho permanece privado até a publicação. Ao publicar, os assentos serão gerados e a sessão ficará disponível na programação.
@@ -169,12 +181,12 @@ export function OrganizerEventForm({ event }: { event: OrganizerEvent }) {
         <form className="border border-rule bg-surface p-5 sm:p-7" onSubmit={saveDraft}>
           <h2 className="font-display text-3xl">Configuração da sessão</h2>
           <div className="mt-7 grid gap-5 sm:grid-cols-2">
-            <label className="sm:col-span-2"><span className="text-sm font-medium">Local</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" onChange={(input) => setVenueName(input.target.value)} required value={venueName} /></label>
-            <label><span className="text-sm font-medium">Sala</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" onChange={(input) => setRoomName(input.target.value)} required value={roomName} /></label>
+            <label className="sm:col-span-2"><span className="text-sm font-medium">Local</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" list="organizer-venue-suggestions" onChange={(input) => setVenueName(input.target.value)} placeholder="Ex.: Cine Projeção" required value={venueName} />{venueSuggestions.length > 0 ? <datalist id="organizer-venue-suggestions">{venueSuggestions.map((venue) => <option key={venue} value={venue} />)}</datalist> : null}</label>
+            <label><span className="text-sm font-medium">Sala</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" onChange={(input) => setRoomName(input.target.value)} placeholder="Ex.: Sala 2" required value={roomName} /></label>
             <label><span className="text-sm font-medium">Data e horário</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" onChange={(input) => setStartsAt(input.target.value)} required type="datetime-local" value={startsAt} /></label>
-            <label><span className="text-sm font-medium">Preço (R$)</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" inputMode="decimal" min="0.01" onChange={(input) => setPrice(input.target.value)} required step="0.01" type="number" value={price} /></label>
-            <label><span className="text-sm font-medium">Fileiras</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" max="20" min="1" onChange={(input) => setRows(input.target.value)} required type="number" value={rows} /></label>
-            <label><span className="text-sm font-medium">Assentos por fileira</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" max="30" min="1" onChange={(input) => setSeatsPerRow(input.target.value)} required type="number" value={seatsPerRow} /></label>
+            <label><span className="text-sm font-medium">Preço (R$)</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" inputMode="decimal" min="0.01" onChange={(input) => setPrice(input.target.value)} placeholder="Ex.: 30,00" required step="0.01" type="number" value={price} /></label>
+            <label><span className="text-sm font-medium">Fileiras</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" max="20" min="1" onChange={(input) => setRows(input.target.value)} placeholder="Ex.: 5" required type="number" value={rows} /></label>
+            <label><span className="text-sm font-medium">Assentos por fileira</span><input className="mt-2 w-full border border-rule bg-paper px-3 py-3 text-sm" max="30" min="1" onChange={(input) => setSeatsPerRow(input.target.value)} placeholder="Ex.: 10" required type="number" value={seatsPerRow} /></label>
           </div>
           <p className="mt-5 text-sm text-ink-muted">Capacidade prevista: {Number.isFinite(capacity) && capacity > 0 ? `${capacity} lugares` : "informe as dimensões da sala"}. Máximo de 600 lugares.</p>
           <button className="mt-7 border border-rule px-5 py-3 text-sm font-semibold hover:bg-surface-secondary disabled:opacity-60" disabled={state.kind === "saving" || state.kind === "publishing"} type="submit">

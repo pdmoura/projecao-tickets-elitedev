@@ -5,7 +5,8 @@ type PageSkeletonProps = {
 
 export function PageSkeleton({ cards = 3, detail = false }: PageSkeletonProps) {
   return (
-    <main aria-busy="true" aria-label="Carregando conteúdo" className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16">
+    <main aria-busy="true" aria-label="Carregando conteúdo" className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16" role="status">
+      <p className="sr-only">Carregando conteúdo</p>
       <div className="mx-auto max-w-6xl animate-pulse">
         <div className="h-10 border-b border-rule" />
         {detail ? (

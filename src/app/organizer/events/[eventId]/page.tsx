@@ -8,8 +8,10 @@ import { LogoutButton } from "@/modules/auth/logout-button";
 import { getRoleHomePath, getSession } from "@/modules/auth";
 import {
   getOrganizerEvent,
+  listOrganizerEvents,
   OrganizerEventOwnershipError,
 } from "@/modules/events";
+import { getVenueSuggestions } from "@/modules/events/venue-suggestions";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +44,14 @@ export default async function OrganizerEventPage({ params }: OrganizerEventPageP
     throw error;
   }
 
+  const organizerEvents = await listOrganizerEvents(session.user.id);
+  const venueSuggestions = getVenueSuggestions(
+    organizerEvents.map((organizerEvent) => organizerEvent.venueName),
+  );
+
   return (
     <main className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-[88rem]">
         <header className="flex flex-wrap items-center justify-between gap-5 border-b border-rule pb-5">
           <BrandLogo priority />
           <nav aria-label="Navegação do organizador" className="flex items-center gap-5">
@@ -54,7 +61,7 @@ export default async function OrganizerEventPage({ params }: OrganizerEventPageP
             <LogoutButton />
           </nav>
         </header>
-        <OrganizerEventForm event={event} />
+        <OrganizerEventForm event={event} venueSuggestions={venueSuggestions} />
       </div>
     </main>
   );

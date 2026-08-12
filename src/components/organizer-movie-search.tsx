@@ -507,7 +507,7 @@ export function OrganizerMovieSearch({ eventId }: { eventId?: string }) {
 
   return (
     <section aria-labelledby="movie-search-title" className="py-10 sm:py-14">
-      <p className="font-code text-xs uppercase tracking-[0.2em] text-accent">
+      <p className="inline-flex bg-ink px-3 py-1.5 font-code text-[0.7rem] font-medium uppercase tracking-[0.12em] text-accent">
         {eventId ? "Trocar filme · rascunho" : "Nova sessão · etapa 1 de 3"}
       </p>
       <h1 className="mt-3 font-display text-5xl leading-[0.95]" id="movie-search-title">

@@ -33,7 +33,7 @@ export default async function OrganizerPage({
 
   return (
     <main className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16">
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-[88rem]">
         <header className="flex flex-wrap items-center justify-between gap-5 border-b border-rule pb-5">
           <BrandLogo priority />
           <nav aria-label="Navegação do organizador" className="flex items-center gap-5">
@@ -76,7 +76,7 @@ export default async function OrganizerPage({
         ) : (
           <section aria-label="Sessões do organizador" className="grid gap-4 pb-16">
             {events.map((event) => (
-              <article className="grid gap-5 border border-rule bg-surface p-4 sm:grid-cols-[6rem_minmax(0,1fr)_auto] sm:p-5" key={event.id}>
+              <article className="grid gap-5 border border-rule bg-surface p-4 sm:grid-cols-[7rem_minmax(0,1fr)_auto] sm:p-5" key={event.id}>
                 <Image alt="" className="aspect-[2/3] w-24 border border-rule object-cover sm:w-full" height={360} src={event.movie.posterPath} width={240} />
                 <div className="min-w-0">
                   <p className={`inline-block border px-2 py-1 font-code text-[0.65rem] uppercase tracking-[0.12em] ${event.status === "PUBLISHED" ? "border-success text-success" : "border-warning text-warning"}`}>
@@ -102,9 +102,9 @@ export default async function OrganizerPage({
                     <p className="mt-3 text-xs leading-5 text-ink-muted">Publicada: esta sessão não pode mais ser alterada.</p>
                   </div>
                 ) : (
-                  <div className="flex h-fit flex-wrap gap-2 sm:max-w-52 sm:justify-end">
-                    <Link className="border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}`}>
-                      Editar
+                  <div className="flex h-fit flex-wrap items-center gap-2 sm:max-w-72 sm:justify-end">
+                    <Link className="bg-accent px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-accent-hover" href={`/organizer/events/${event.id}`}>
+                      Editar sessão
                     </Link>
                     <Link className="border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}/change-movie`}>
                       Trocar filme

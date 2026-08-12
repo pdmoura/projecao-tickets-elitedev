@@ -6,6 +6,7 @@ import {
 } from "next/font/google";
 
 import "./globals.css";
+import { BackToTopButton } from "@/components/back-to-top-button";
 
 const displayFont = Playfair_Display({
   variable: "--font-display",
@@ -55,7 +56,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Projeção — sessões de cinema",
     description: "Sessões especiais de cinema e ingressos digitais.",
-    images: ["/brand/opengraph-image.png"],
+    images: ["/brand/opengraph-image.jpg"],
   },
 };
 
@@ -68,6 +69,7 @@ export default function RootLayout({
         className={`${displayFont.variable} ${uiFont.variable} ${codeFont.variable}`}
       >
         {children}
+        <BackToTopButton />
       </body>
     </html>
   );
