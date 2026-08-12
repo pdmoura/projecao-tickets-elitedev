@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 
 type EventPageProps = {
   params: Promise<{ eventId: string }>;
+  searchParams: Promise<{ seatConflict?: string | string[] }>;
 };
 
 async function getEventPageData(eventId: string) {
@@ -29,8 +30,9 @@ async function getEventPageData(eventId: string) {
   }
 }
 
-export default async function EventPage({ params }: EventPageProps) {
+export default async function EventPage({ params, searchParams }: EventPageProps) {
   const { eventId } = await params;
+  const resolvedSearchParams = await searchParams;
   const [event, seats] = await getEventPageData(eventId);
   const availableSeats = seats.filter((seat) => seat.status === "AVAILABLE").length;
   const releaseYear = formatReleaseYear(event.movie.releaseDate);
@@ -101,7 +103,12 @@ export default async function EventPage({ params }: EventPageProps) {
               </dl>
             </div>
           </article>
-          <SeatMap eventId={event.id} priceCents={event.priceCents} seats={seats} />
+          <SeatMap
+            eventId={event.id}
+            initialSeatConflict={resolvedSearchParams.seatConflict === "1"}
+            priceCents={event.priceCents}
+            seats={seats}
+          />
         </div>
       </main>
   );

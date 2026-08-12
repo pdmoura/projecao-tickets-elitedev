@@ -19,3 +19,5 @@ export type TicketDetail = TicketSummary & {
   unitPriceCents: number;
   usedAt: string | null;
 };
+
+export type SharedTicketDetail = Omit<TicketDetail, "holderName">;

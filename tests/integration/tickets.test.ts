@@ -1,11 +1,13 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { GET as ticketDetailRoute } from "@/app/api/tickets/[ticketId]/route";
+import { POST as shareTicketRoute } from "@/app/api/tickets/[ticketId]/share/route";
 import { GET as ticketsRoute } from "@/app/api/tickets/route";
 import { POST as checkoutRoute } from "@/app/api/checkout/route";
 import { db } from "@/lib/db";
 import { authRouteHandlers } from "@/modules/auth/next-handler";
 import { decryptValidationToken } from "@/modules/tickets/ticket-credentials";
+import { getSharedTicket, TicketNotFoundError } from "@/modules/tickets";
 import { demoPassword, seedDemoData } from "../../prisma/seed";
 
 async function cleanDatabase() {
@@ -88,6 +90,16 @@ function getTicket(ticketId: string, cookie: string) {
   return ticketDetailRoute(
     new Request(`http://localhost:3000/api/tickets/${ticketId}`, {
       headers: { cookie },
+    }),
+    { params: Promise.resolve({ ticketId }) },
+  );
+}
+
+function shareTicket(ticketId: string, cookie: string) {
+  return shareTicketRoute(
+    new Request(`http://localhost:3000/api/tickets/${ticketId}/share`, {
+      headers: { cookie },
+      method: "POST",
     }),
     { params: Promise.resolve({ ticketId }) },
   );
@@ -180,5 +192,34 @@ describe("customer tickets", () => {
     expect(foreignResponse.status).toBe(404);
     expect(missingResponse.status).toBe(404);
     expect(await foreignResponse.json()).toEqual(await missingResponse.json());
+  });
+
+  it("rotates a separate share credential without transferring ticket ownership", async () => {
+    const ownerCookie = await signIn("cliente1@projecao.local");
+    const otherCookie = await signIn("cliente2@projecao.local");
+    const purchase = await buySeats(ownerCookie, ["A1"]);
+    const ticketId = purchase.tickets[0]!.id;
+    const ownerId = (await db.ticket.findUniqueOrThrow({ where: { id: ticketId } }))
+      .customerId;
+
+    const firstResponse = await shareTicket(ticketId, ownerCookie);
+    const firstUrl = (await firstResponse.json() as { url: string }).url;
+    const firstToken = new URL(firstUrl).pathname.split("/").at(-1)!;
+    const sharedTicket = await getSharedTicket(firstToken);
+
+    expect(firstResponse.status).toBe(200);
+    expect(sharedTicket).not.toHaveProperty("holderName");
+    expect(sharedTicket.qrDataUrl).toMatch(/^data:image\/png;base64,/);
+    expect((await db.ticket.findUniqueOrThrow({ where: { id: ticketId } })).customerId).toBe(
+      ownerId,
+    );
+
+    const secondResponse = await shareTicket(ticketId, ownerCookie);
+    const secondUrl = (await secondResponse.json() as { url: string }).url;
+    const secondToken = new URL(secondUrl).pathname.split("/").at(-1)!;
+
+    await expect(getSharedTicket(firstToken)).rejects.toBeInstanceOf(TicketNotFoundError);
+    await expect(getSharedTicket(secondToken)).resolves.toMatchObject({ id: ticketId });
+    expect((await shareTicket(ticketId, otherCookie)).status).toBe(404);
   });
 });

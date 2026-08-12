@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { toggleSeatSelection } from "@/modules/seats/seat-selection";
+import {
+  mergeSeatAvailability,
+  toggleSeatSelection,
+} from "@/modules/seats/seat-selection";
 
 const availableSeat = {
   id: "seat-a1",
@@ -28,5 +31,17 @@ describe("seat selection", () => {
 
   it("keeps sold seats out of the local selection", () => {
     expect(toggleSeatSelection(["seat-a1"], soldSeat)).toEqual(["seat-a1"]);
+  });
+
+  it("preserves available selections and removes only seats sold by a refresh", () => {
+    const merge = mergeSeatAvailability(
+      [availableSeat, soldSeat],
+      ["seat-a1", "seat-a2"],
+      [availableSeat, soldSeat],
+    );
+
+    expect(merge.selectedSeatIds).toEqual(["seat-a1"]);
+    expect(merge.unavailableSeatLabels).toEqual(["A2"]);
+    expect(merge.seats).toEqual([availableSeat, soldSeat]);
   });
 });

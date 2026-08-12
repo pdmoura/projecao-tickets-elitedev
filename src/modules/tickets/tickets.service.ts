@@ -2,12 +2,23 @@ import "server-only";
 
 import type { PrismaClient } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { getServerEnv } from "@/lib/env/server";
 
-import { decryptValidationToken, formatManualCode } from "./ticket-credentials";
+import {
+  decryptValidationToken,
+  formatManualCode,
+  TicketCredentialError,
+} from "./ticket-credentials";
 import { renderTicketQr } from "./ticket-qr";
 import { TicketNotFoundError } from "./tickets.errors";
-import { findCustomerTicket, listCustomerTickets } from "./tickets.repository";
-import type { TicketDetail, TicketSummary } from "./tickets.types";
+import {
+  findCustomerTicket,
+  findSharedTicket,
+  listCustomerTickets,
+  rotateCustomerTicketShareToken,
+} from "./tickets.repository";
+import { generateShareToken, hashShareToken } from "./share-credentials";
+import type { SharedTicketDetail, TicketDetail, TicketSummary } from "./tickets.types";
 
 type TicketPresentationRecord = Awaited<
   ReturnType<typeof listCustomerTickets>
@@ -47,6 +58,24 @@ function toTicketSummary(record: TicketPresentationRecord): TicketSummary {
   };
 }
 
+async function toSharedTicketDetail(
+  record: NonNullable<Awaited<ReturnType<typeof findSharedTicket>>>,
+): Promise<SharedTicketDetail> {
+  const validationToken = decryptValidationToken({
+    validationTokenAuthTag: record.validationTokenAuthTag,
+    validationTokenCiphertext: record.validationTokenCiphertext,
+    validationTokenIv: record.validationTokenIv,
+  });
+
+  return {
+    ...toTicketSummary(record),
+    manualCode: formatManualCode(record.manualCode),
+    qrDataUrl: await renderTicketQr(validationToken),
+    unitPriceCents: record.reservationItem.unitPriceCents,
+    usedAt: record.usedAt?.toISOString() ?? null,
+  };
+}
+
 export function createTicketService(database: PrismaClient = db) {
   return {
     async getTicket(customerId: string, ticketId: string): Promise<TicketDetail> {
@@ -77,6 +106,44 @@ export function createTicketService(database: PrismaClient = db) {
 
       return tickets.map(toTicketSummary);
     },
+
+    async shareTicket(customerId: string, ticketId: string): Promise<{ url: string }> {
+      const token = generateShareToken();
+      const update = await rotateCustomerTicketShareToken(
+        database,
+        customerId,
+        ticketId,
+        hashShareToken(token),
+      );
+
+      if (update.count !== 1) {
+        throw new TicketNotFoundError();
+      }
+
+      return {
+        url: new URL(`/tickets/shared/${token}`, getServerEnv().APP_URL).toString(),
+      };
+    },
+
+    async getSharedTicket(token: string): Promise<SharedTicketDetail> {
+      let ticket;
+
+      try {
+        ticket = await findSharedTicket(database, hashShareToken(token));
+      } catch (error) {
+        if (error instanceof TicketCredentialError) {
+          throw new TicketNotFoundError();
+        }
+
+        throw error;
+      }
+
+      if (!ticket) {
+        throw new TicketNotFoundError();
+      }
+
+      return toSharedTicketDetail(ticket);
+    },
   };
 }
 
@@ -84,3 +151,5 @@ const ticketService = createTicketService();
 
 export const getTicket = ticketService.getTicket;
 export const listTickets = ticketService.listTickets;
+export const shareTicket = ticketService.shareTicket;
+export const getSharedTicket = ticketService.getSharedTicket;

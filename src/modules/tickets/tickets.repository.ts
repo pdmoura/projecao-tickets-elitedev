@@ -44,3 +44,29 @@ export function findCustomerTicket(
     where: { customerId, id: ticketId },
   });
 }
+
+export function rotateCustomerTicketShareToken(
+  database: PrismaClient,
+  customerId: string,
+  ticketId: string,
+  shareTokenHash: string,
+) {
+  return database.ticket.updateMany({
+    data: { shareTokenHash },
+    where: { customerId, id: ticketId },
+  });
+}
+
+export function findSharedTicket(database: PrismaClient, shareTokenHash: string) {
+  return database.ticket.findFirst({
+    select: {
+      ...ticketPresentationSelect,
+      manualCode: true,
+      reservationItem: { select: { unitPriceCents: true } },
+      validationTokenAuthTag: true,
+      validationTokenCiphertext: true,
+      validationTokenIv: true,
+    },
+    where: { shareTokenHash },
+  });
+}

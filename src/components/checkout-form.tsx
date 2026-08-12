@@ -128,7 +128,7 @@ export function CheckoutForm({ eventId, seatIds }: CheckoutFormProps) {
           {state.code === "SEAT_UNAVAILABLE" ? (
             <Link
               className="mt-2 inline-block text-sm underline"
-              href={`/events/${eventId}`}
+              href={`/events/${eventId}?seatConflict=1`}
             >
               Escolher outros assentos
             </Link>

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
+import { ShareTicketButton } from "@/components/share-ticket-button";
 import { getRoleHomePath, getSession } from "@/modules/auth";
 import { formatCurrency, formatEventDate } from "@/modules/events/event-format";
 import { getTicket, TicketNotFoundError } from "@/modules/tickets";
@@ -103,6 +104,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
                   Apresente este ingresso na portaria. Cada QR é individual e
                   válido somente para o assento indicado.
                 </p>
+                <ShareTicketButton ticketId={ticket.id} />
               </div>
 
               <div className="relative border-t border-dashed border-ink/30 bg-surface-secondary p-7 text-center lg:border-l lg:border-t-0">
