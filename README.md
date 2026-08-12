@@ -8,7 +8,7 @@ Plataforma full-stack para criar sessões de cinema, vender assentos marcados e 
   <img src="docs/media/projecao-home.webp" alt="Página inicial do Projeção" width="100%" />
 </p>
 
-Tenho 24 anos, sou desenvolvedor júnior e estou perto de concluir a faculdade. Um amigo já tinha me pedido algo parecido com este projeto, mas eu não consegui desenvolver na época por falta de tempo. O challenge foi uma oportunidade de finalmente explorar a ideia com mais cuidado: quis entregar algo funcional, com identidade própria, e deixar uma base que possa evoluir depois.
+Este projeto foi desenvolvido para o Desafio Elite Dev da Verzel. Tenho 24 anos, sou desenvolvedor júnior e estou perto de concluir a faculdade. Um amigo já tinha me pedido algo parecido, mas eu não consegui desenvolver na época por falta de tempo. O desafio foi uma oportunidade de finalmente explorar a ideia com mais cuidado: quis entregar algo funcional, com identidade própria, e deixar uma base que possa evoluir depois.
 
 ## Demo publicada
 
