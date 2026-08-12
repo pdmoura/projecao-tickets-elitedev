@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type BarcodeDetectorInstance = {
-  detect(source: HTMLVideoElement): Promise<Array<{ rawValue?: string }>>;
-};
-
-type BarcodeDetectorConstructor = new (options: {
-  formats: string[];
-}) => BarcodeDetectorInstance;
+import {
+  createFallbackQrDecoder,
+  createNativeQrDecoder,
+  createSingleTokenHandler,
+  stopMediaStream,
+} from "./qr-camera-decoder";
 
 type CameraState =
   | { kind: "idle" }
@@ -17,26 +16,20 @@ type CameraState =
   | { kind: "unsupported" }
   | { kind: "error"; message: string };
 
-function getBarcodeDetector(): BarcodeDetectorConstructor | null {
-  const browser = globalThis as typeof globalThis & {
-    BarcodeDetector?: BarcodeDetectorConstructor;
-  };
-
-  return browser.BarcodeDetector ?? null;
-}
+const fallbackScanIntervalMs = 200;
 
 export function getCameraErrorMessage(error: unknown): string {
   if (error instanceof DOMException) {
     if (error.name === "NotAllowedError" || error.name === "SecurityError") {
-      return "O acesso à câmera foi negado. Use o código manual abaixo.";
+      return "O acesso à câmera foi negado. Libere a permissão do navegador ou use o código manual.";
     }
 
     if (error.name === "NotFoundError") {
-      return "Nenhuma câmera foi encontrada neste dispositivo. Use o código manual abaixo.";
+      return "Nenhuma câmera foi encontrada neste dispositivo. Use o código manual.";
     }
   }
 
-  return "Não foi possível iniciar a câmera. Use o código manual abaixo.";
+  return "Não foi possível iniciar a câmera. Use o código manual.";
 }
 
 export function QrCameraScanner({
@@ -47,9 +40,11 @@ export function QrCameraScanner({
   onToken: (token: string) => Promise<void>;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const scanningRef = useRef(false);
+  const lastFallbackScanRef = useRef(0);
   const [state, setState] = useState<CameraState>({ kind: "idle" });
 
   const stopCamera = useCallback(() => {
@@ -58,10 +53,14 @@ export function QrCameraScanner({
       window.cancelAnimationFrame(animationFrameRef.current);
       animationFrameRef.current = null;
     }
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    stopMediaStream(streamRef.current);
     streamRef.current = null;
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+    }
+    if (canvasRef.current) {
+      canvasRef.current.width = 0;
+      canvasRef.current.height = 0;
     }
   }, []);
 
@@ -72,8 +71,7 @@ export function QrCameraScanner({
       return;
     }
 
-    const Detector = getBarcodeDetector();
-    if (!navigator.mediaDevices?.getUserMedia || !Detector) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       setState({ kind: "unsupported" });
       return;
     }
@@ -88,15 +86,26 @@ export function QrCameraScanner({
       const video = videoRef.current;
 
       if (!video) {
-        stream.getTracks().forEach((track) => track.stop());
+        stopMediaStream(stream);
         return;
       }
 
       streamRef.current = stream;
       video.srcObject = stream;
       await video.play();
-      const detector = new Detector({ formats: ["qr_code"] });
+
+      const nativeDecoder = await createNativeQrDecoder();
+      if (!canvasRef.current) {
+        canvasRef.current = document.createElement("canvas");
+      }
+      const decoder = nativeDecoder ?? createFallbackQrDecoder(canvasRef.current);
+      const handleToken = createSingleTokenHandler(async (token) => {
+        stopCamera();
+        await onToken(token);
+      });
+
       scanningRef.current = true;
+      lastFallbackScanRef.current = 0;
       setState({ kind: "scanning" });
 
       const detectNextFrame = async () => {
@@ -104,17 +113,25 @@ export function QrCameraScanner({
           return;
         }
 
-        try {
-          const codes = await detector.detect(videoRef.current);
-          const token = codes.find((code) => code.rawValue?.trim())?.rawValue?.trim();
+        const now = performance.now();
+        const shouldScan =
+          decoder.kind === "native" ||
+          now - lastFallbackScanRef.current >= fallbackScanIntervalMs;
 
-          if (token) {
-            stopCamera();
-            await onToken(token);
-            return;
+        if (shouldScan) {
+          if (decoder.kind === "fallback") {
+            lastFallbackScanRef.current = now;
           }
-        } catch {
-          // A frame sem leitura é normal; a câmera continua ativa.
+
+          try {
+            const token = await decoder.decode(videoRef.current);
+
+            if (token && (await handleToken(token))) {
+              return;
+            }
+          } catch {
+            // A frame sem leitura é normal; a câmera continua ativa.
+          }
         }
 
         if (scanningRef.current) {
@@ -139,7 +156,7 @@ export function QrCameraScanner({
         <div aria-hidden="true" className="pointer-events-none absolute inset-5 border-2 border-gate-valid/80" />
         {state.kind !== "scanning" ? <p className="absolute inset-x-5 bottom-5 text-center text-sm text-gate-muted">{state.kind === "starting" ? "Iniciando câmera…" : "A câmera será usada somente para ler o QR."}</p> : <p className="absolute inset-x-5 bottom-5 border-t-2 border-gate-valid pt-3 text-center font-code text-xs uppercase tracking-[0.14em] text-gate-valid">Lendo QR…</p>}
       </div>
-      {state.kind === "unsupported" ? <p className="mt-4 border-l-4 border-gate-used bg-gate-bg p-4 text-sm text-gate-used" role="status">Este navegador não oferece leitura de QR pela câmera. Use o código manual.</p> : null}
+      {state.kind === "unsupported" ? <p className="mt-4 border-l-4 border-gate-used bg-gate-bg p-4 text-sm text-gate-used" role="status">Este navegador não oferece acesso à câmera. Use o código manual.</p> : null}
       {state.kind === "error" ? <p className="mt-4 border-l-4 border-gate-invalid bg-gate-bg p-4 text-sm text-gate-invalid" role="alert">{state.message}</p> : null}
       <div className="mt-5 flex flex-wrap justify-center gap-3 sm:justify-start">
         <button className="bg-gate-valid px-5 py-3 text-sm font-semibold text-gate-bg hover:brightness-110 disabled:opacity-60" disabled={disabled || state.kind === "starting" || state.kind === "scanning"} onClick={startCamera} type="button">{state.kind === "starting" ? "Iniciando…" : "Usar câmera"}</button>

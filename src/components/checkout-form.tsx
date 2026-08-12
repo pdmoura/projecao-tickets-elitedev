@@ -5,6 +5,7 @@ import { type FormEvent, useRef, useState } from "react";
 
 import { AvailabilityToast } from "@/components/availability-toast";
 import { formatCardExpiry } from "@/modules/checkout/expiry-format";
+import { simulatedTestCards } from "@/modules/checkout/simulated-payment-provider";
 import {
   formatSeatsUnavailableMessage,
   resolveUnavailableSeatLabels,
@@ -33,6 +34,29 @@ type CheckoutError = {
   details?: { seatIds?: string[]; seatLabels?: string[] };
   message?: string;
 };
+
+function TestCardHelp() {
+  return (
+    <aside className="mt-5 border-y border-rule py-4" aria-label="Cartões de teste">
+      <p className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">
+        Cartões de teste
+      </p>
+      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2 sm:gap-5">
+        <div>
+          <dt className="font-medium text-ink">Aprovar compra</dt>
+          <dd className="mt-1 font-code text-ink">{simulatedTestCards.approved}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-ink">Simular recusa</dt>
+          <dd className="mt-1 font-code text-ink">{simulatedTestCards.declined}</dd>
+        </div>
+      </dl>
+      <p className="mt-3 text-xs leading-5 text-ink-muted">
+        Somente estes cartões funcionam nesta simulação.
+      </p>
+    </aside>
+  );
+}
 
 export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
   const [state, setState] = useState<CheckoutState>({ kind: "idle" });
@@ -101,10 +125,7 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
     setState({
       code,
       kind: "error",
-      message:
-        code === "PAYMENT_DECLINED"
-          ? "O pagamento de teste foi recusado. Use outro cartão para continuar."
-          : error?.message ?? "Não foi possível concluir a compra.",
+      message: error?.message ?? "Não foi possível concluir a compra.",
     });
   }
 
@@ -136,8 +157,7 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
           <div>
             <h2 className="font-display text-3xl">Pagamento de teste</h2>
             <p className="mt-3 text-sm leading-6 text-ink-muted">
-              Use <span className="font-code">4242 4242 4242 4242</span> para aprovar
-              ou <span className="font-code">4000 0000 0000 0002</span> para recusar.
+              Esta etapa simula o resultado do pagamento sem processar cartões reais.
             </p>
           </div>
           <Link
@@ -147,6 +167,7 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
             Voltar para escolher assentos
           </Link>
         </div>
+        <TestCardHelp />
         <div className="mt-6 grid gap-5 sm:grid-cols-2">
           <label className="sm:col-span-2">
             <span className="text-sm font-medium">Número do cartão</span>
@@ -203,7 +224,27 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
         </div>
         {state.kind === "error" && state.code !== "SEAT_UNAVAILABLE" ? (
           <div className="mt-5 border-l-4 border-error bg-paper p-4" role="alert">
-            <p className="font-semibold text-error">{state.message}</p>
+            {state.code === "PAYMENT_DECLINED" ? (
+              <>
+                <p className="font-semibold text-error">Pagamento recusado na simulação</p>
+                <p className="mt-2 text-sm leading-6 text-ink">
+                  Este cartão foi configurado para simular uma recusa. Para concluir a compra, use o cartão de aprovação <span className="font-code">{simulatedTestCards.approved}</span>.
+                </p>
+              </>
+            ) : state.code === "TEST_CARD_UNSUPPORTED" ? (
+              <>
+                <p className="font-semibold text-error">Cartão de teste não reconhecido</p>
+                <p className="mt-2 text-sm leading-6 text-ink">
+                  Esta simulação aceita somente os cartões de teste informados acima.
+                </p>
+                <p className="mt-3 font-code text-sm text-ink">
+                  Aprovar: {simulatedTestCards.approved}<br />
+                  Recusar: {simulatedTestCards.declined}
+                </p>
+              </>
+            ) : (
+              <p className="font-semibold text-error">{state.message}</p>
+            )}
             {state.code === "AUTH_REQUIRED" ? (
               <Link className="mt-2 inline-block text-sm underline" href="/login">
                 Entrar para continuar

@@ -108,6 +108,9 @@ Usar entradas explícitas do simulador para aprovação e recusa.
 ### Rejeitado
 Sucesso/falha aleatórios e processamento real de pagamento em produção.
 
+### Evolução técnica
+O checkout usa um `PaymentProvider` mínimo, hoje implementado pelo simulador determinístico: `4242 4242 4242 4242` aprova e `4000 0000 0000 0002` recusa. Um futuro gateway pode implementar o mesmo contrato sem levar detalhes do provedor ao checkout. Tokenização no frontend, webhooks, idempotência do gateway, estados assíncronos, referências de cobrança e reembolso/cancelamento não são implementados neste desafio.
+
 ---
 
 ## ADR-006 — Token QR opaco com armazenamento por hash

@@ -170,6 +170,29 @@ describe("transactional checkout", () => {
     });
   });
 
+  it("rejects an unsupported test card without creating payment or purchase records", async () => {
+    const seat = await getSeat("seed-event-spirited-away", "A1");
+    const customerCookie = await signIn("cliente1@projecao.local");
+    const input = approvedCheckoutInput(seat.eventId, [seat.id]);
+    input.payment.cardNumber = "5555 5555 5555 4444";
+    const response = await postCheckout(customerCookie, input);
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "TEST_CARD_UNSUPPORTED",
+        message: "Cartão de teste não reconhecido.",
+      },
+    });
+    await expect(db.payment.count()).resolves.toBe(0);
+    await expect(db.reservation.count()).resolves.toBe(0);
+    await expect(db.reservationItem.count()).resolves.toBe(0);
+    await expect(db.ticket.count()).resolves.toBe(0);
+    await expect(db.eventSeat.findUniqueOrThrow({ where: { id: seat.id } })).resolves.toMatchObject({
+      status: "AVAILABLE",
+    });
+  });
+
   it("rejects duplicates, foreign seats and unpublished events", async () => {
     const firstSeat = await getSeat("seed-event-spirited-away", "A1");
     const foreignSeat = await getSeat("seed-event-paris-texas", "A1");

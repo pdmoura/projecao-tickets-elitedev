@@ -7,6 +7,7 @@ import {
   declinedCardNumber,
   simulatePayment,
 } from "@/modules/checkout/payment-simulator";
+import { simulatedPaymentProvider } from "@/modules/checkout/simulated-payment-provider";
 
 const basePayment = {
   cardNumber: approvedCardNumber,
@@ -28,6 +29,15 @@ describe("payment simulator", () => {
     expect(
       simulatePayment({ ...basePayment, cardNumber: declinedCardNumber }, now),
     ).toBe("DECLINED");
+    expect(
+      simulatePayment({ ...basePayment, cardNumber: "5555 5555 5555 4444" }, now),
+    ).toBe("UNSUPPORTED");
+  });
+
+  it("exposes the deterministic result through the payment-provider boundary", async () => {
+    await expect(
+      simulatedPaymentProvider.authorize({ amountCents: 3200, payment: basePayment }),
+    ).resolves.toEqual({ status: "APPROVED" });
   });
 
   it("validates the expiry and CVV only for the current request", () => {

@@ -18,6 +18,16 @@ export class PaymentDeclinedError extends Error {
   }
 }
 
+export class UnsupportedTestCardError extends Error {
+  readonly code = "TEST_CARD_UNSUPPORTED";
+  readonly status = 400;
+
+  constructor() {
+    super("Cartão de teste não reconhecido.");
+    this.name = "UnsupportedTestCardError";
+  }
+}
+
 export class SeatUnavailableError extends Error {
   readonly code = "SEAT_UNAVAILABLE";
   readonly status = 409;

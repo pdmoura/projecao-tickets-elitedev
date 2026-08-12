@@ -29,7 +29,7 @@ export function HeaderNavigation({ items }: HeaderNavigationProps) {
             className={`font-code text-[0.68rem] font-medium uppercase tracking-[0.13em] underline decoration-accent underline-offset-4 transition-colors sm:text-xs ${
               isActive
                 ? "text-ink decoration-[3px]"
-                : "text-ink-muted decoration-1 hover:text-ink hover:decoration-2"
+                : "text-ink-muted decoration-1 hover:text-ink hover:decoration-2 hover:decoration-accent"
             }`}
             href={item.href}
             key={item.href}

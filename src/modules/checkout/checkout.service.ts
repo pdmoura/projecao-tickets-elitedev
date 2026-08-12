@@ -7,15 +7,21 @@ import { createStoredTicketCredentials } from "@/modules/tickets/ticket-credenti
 import {
   CheckoutValidationError,
   PaymentDeclinedError,
+  UnsupportedTestCardError,
 } from "./checkout.errors";
 import {
+  getCheckoutAmount,
   persistApprovedCheckout,
   persistDeclinedPayment,
 } from "./checkout.repository";
-import { simulatePayment } from "./payment-simulator";
+import type { PaymentProvider } from "./payment-provider";
+import { simulatedPaymentProvider } from "./simulated-payment-provider";
 import type { ApprovedCheckout, CheckoutInput } from "./checkout.types";
 
-export function createCheckoutService(database: PrismaClient = db) {
+export function createCheckoutService(
+  database: PrismaClient = db,
+  paymentProvider: PaymentProvider = simulatedPaymentProvider,
+) {
   return {
     async checkout(
       customerId: string,
@@ -32,9 +38,20 @@ export function createCheckoutService(database: PrismaClient = db) {
       const seatIds = [...input.seatIds].sort((left, right) =>
         left.localeCompare(right),
       );
-      const paymentResult = simulatePayment(input.payment);
+      const amountCents = await getCheckoutAmount(database, {
+        eventId: input.eventId,
+        seatIds,
+      });
+      const paymentResult = await paymentProvider.authorize({
+        amountCents,
+        payment: input.payment,
+      });
 
-      if (paymentResult === "DECLINED") {
+      if (paymentResult.status === "UNSUPPORTED") {
+        throw new UnsupportedTestCardError();
+      }
+
+      if (paymentResult.status === "DECLINED") {
         await persistDeclinedPayment(database, {
           customerId,
           eventId: input.eventId,

@@ -30,10 +30,10 @@ function requirePositiveTotal(priceCents: number | null, seatCount: number): num
   return totalCents;
 }
 
-export async function persistDeclinedPayment(
+export async function getCheckoutAmount(
   database: PrismaClient,
-  input: { customerId: string; eventId: string; seatIds: string[] },
-): Promise<void> {
+  input: { eventId: string; seatIds: string[] },
+): Promise<number> {
   const event = await database.event.findFirst({
     select: { priceCents: true },
     where: {
@@ -55,9 +55,18 @@ export async function persistDeclinedPayment(
     throw new SeatUnavailableError(input.seatIds);
   }
 
+  return requirePositiveTotal(event.priceCents, input.seatIds.length);
+}
+
+export async function persistDeclinedPayment(
+  database: PrismaClient,
+  input: { customerId: string; eventId: string; seatIds: string[] },
+): Promise<void> {
+  const amountCents = await getCheckoutAmount(database, input);
+
   await database.payment.create({
     data: {
-      amountCents: requirePositiveTotal(event.priceCents, input.seatIds.length),
+      amountCents,
       customerId: input.customerId,
       eventId: input.eventId,
       provider: "SIMULATOR",

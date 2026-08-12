@@ -11,6 +11,7 @@ import {
   parseCheckoutInput,
   PaymentDeclinedError,
   SeatUnavailableError,
+  UnsupportedTestCardError,
 } from "@/modules/checkout";
 import { EventNotFoundError } from "@/modules/events";
 
@@ -20,7 +21,8 @@ function checkoutErrorResponse(error: unknown): NextResponse {
     error instanceof AuthorizationError ||
     error instanceof CheckoutValidationError ||
     error instanceof EventNotFoundError ||
-    error instanceof PaymentDeclinedError
+    error instanceof PaymentDeclinedError ||
+    error instanceof UnsupportedTestCardError
   ) {
     return NextResponse.json(
       { error: { code: error.code, message: error.message } },

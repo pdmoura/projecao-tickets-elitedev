@@ -85,7 +85,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                     width={600}
                   />
                   <div className="p-5">
-                    <p className="font-code text-xs uppercase tracking-[0.13em] text-accent">
+                    <p className="font-code text-xs uppercase tracking-[0.13em] text-ink-muted">
                       {formatEventDate(event.startsAt)}
                     </p>
                     <h2 className="mt-3 font-display text-3xl leading-tight">
