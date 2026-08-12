@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Armchair, CalendarDays, Ticket } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { HomeFooter } from "@/components/home-footer";
@@ -15,17 +16,17 @@ type HomePageProps = {
 const steps = [
   {
     description: "Encontre um filme na programação e veja data, horário e sala.",
-    icon: "/brand/icons/sessao.png",
+    icon: CalendarDays,
     title: "Escolha uma sessão",
   },
   {
     description: "Selecione os assentos disponíveis no mapa da sala.",
-    icon: "/brand/icons/lugar.png",
+    icon: Armchair,
     title: "Escolha seu lugar",
   },
   {
     description: "Finalize o pagamento de teste e use o QR Code na entrada.",
-    icon: "/brand/icons/ingresso.png",
+    icon: Ticket,
     title: "Leve seu ingresso",
   },
 ];
@@ -111,15 +112,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         >
           <SectionLabel>Como funciona</SectionLabel>
           <div className="mt-8 grid divide-y divide-rule border-y border-rule lg:grid-cols-3 lg:divide-x lg:divide-y-0">
-            {steps.map((step) => (
+            {steps.map((step) => {
+              const Icon = step.icon;
+
+              return (
               <article className="flex gap-4 px-0 py-7 sm:gap-5 sm:px-4 lg:px-7 lg:py-4" key={step.title}>
-                <Image alt="" aria-hidden="true" className="mt-0.5 size-14 shrink-0 object-contain brightness-0 contrast-150 sm:size-16" height={80} src={step.icon} width={80} />
+                <Icon aria-hidden="true" className="mt-0.5 size-12 shrink-0 text-ink sm:size-14 lg:size-16" strokeWidth={1.8} />
                 <div>
                   <h2 className="font-display text-3xl leading-tight">{step.title}</h2>
                   <p className="mt-3 text-sm leading-6 text-ink-muted">{step.description}</p>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
           <div className="mt-10 grid gap-8 bg-surface-secondary p-6 sm:p-8 lg:grid-cols-[minmax(13rem,0.8fr)_minmax(16rem,0.9fr)_minmax(16rem,0.8fr)] lg:items-center lg:gap-10">
             <Image alt="Ilustração de pessoas chegando ao cinema" className="mx-auto h-auto w-full max-w-sm object-contain" height={540} src="/brand/illustrations/casal.png" width={540} />

@@ -27,7 +27,7 @@ export async function AppHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 -mx-6 flex items-center justify-between gap-4 border-b border-rule bg-paper/95 px-6 py-4 shadow-[0_1px_0_rgba(20,20,20,0.03)] backdrop-blur-md sm:-mx-10 sm:px-10 sm:py-5 lg:-mx-16 lg:px-16">
+    <header className="sticky top-0 z-40 -mx-6 flex items-center justify-between gap-4 border-b border-rule bg-paper/95 px-5 py-4 shadow-[0_1px_0_rgba(20,20,20,0.03)] backdrop-blur-md sm:-mx-10 sm:px-10 sm:py-5 lg:-mx-16 lg:px-16">
       <BrandLogo className="h-auto w-40 sm:w-52 lg:w-[16rem]" priority />
       <nav
         aria-label="Navegação principal"

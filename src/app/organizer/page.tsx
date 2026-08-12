@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { Circle, Eye, Pencil, RefreshCw, Send } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { DeleteOrganizerDraftButton } from "@/components/delete-organizer-draft-button";
@@ -10,16 +11,6 @@ import { formatCurrency, formatEventDate } from "@/modules/events/event-format";
 import { listOrganizerEvents, type OrganizerEvent } from "@/modules/events";
 
 export const dynamic = "force-dynamic";
-
-function ActionIcon({ name }: { name: "edit" | "eye" | "swap" }) {
-  const paths = {
-    edit: <path d="m4 16 9.5-9.5 4 4L8 20H4v-4Zm12.3-10.3 1.1-1.1a1.9 1.9 0 0 1 2.7 2.7L19 8.4l-4-4Z" />,
-    eye: <><path d="M2.5 12s3.4-5.5 9.5-5.5S21.5 12 21.5 12 18.1 17.5 12 17.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="2.5" /></>,
-    swap: <><path d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3 3m-3-3 3-3" /></>,
-  } as const;
-
-  return <svg aria-hidden="true" className="size-4 shrink-0 fill-none stroke-current stroke-[1.8]" viewBox="0 0 24 24">{paths[name]}</svg>;
-}
 
 function EventCard({ event }: { event: OrganizerEvent }) {
   const stateClasses = event.status === "DRAFT"
@@ -30,7 +21,7 @@ function EventCard({ event }: { event: OrganizerEvent }) {
   const stateLabel = event.status === "DRAFT" ? "Rascunho" : event.isPast ? "Encerrada" : "Publicada";
 
   return (
-    <article className="grid gap-5 border border-rule bg-surface p-4 shadow-[0_1px_0_rgba(20,20,20,0.03)] sm:grid-cols-[8rem_minmax(0,1fr)] sm:p-5 lg:grid-cols-[8rem_minmax(0,1fr)_auto]">
+    <article className="grid gap-5 border border-rule bg-surface p-4 shadow-[0_1px_0_rgba(20,20,20,0.03)] sm:grid-cols-[8rem_minmax(0,1fr)] sm:p-5">
       <Image alt="" className="aspect-[2/3] w-24 self-start border border-rule object-cover sm:w-full" height={360} src={event.movie.posterPath} width={240} />
       <div className="min-w-0">
         <p className={`inline-flex items-center gap-2 border px-2.5 py-1.5 font-code text-[0.68rem] font-medium uppercase tracking-[0.13em] ${stateClasses}`}>
@@ -46,17 +37,32 @@ function EventCard({ event }: { event: OrganizerEvent }) {
         </dl>
       </div>
       {!event.canEdit ? (
-        <div className="h-fit border-t border-rule pt-5 sm:col-span-2 lg:col-span-1 lg:max-w-60 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-          <Link className="inline-flex w-full items-center justify-center gap-2 border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}`}><ActionIcon name="eye" /> Ver sessão</Link>
-          <p className="mt-3 text-sm leading-6 text-ink-muted">{event.hasTransactionalHistory ? "Esta sessão possui histórico de ingressos e foi preservada para consulta." : "Esta sessão não pode mais ser alterada."}</p>
-        </div>
+        <footer className="flex flex-col items-center gap-3 border-t border-rule pt-4 sm:col-span-2 sm:flex-row sm:justify-between">
+          <p className="max-w-2xl text-sm leading-6 text-ink-muted">{event.hasTransactionalHistory ? "Esta sessão possui histórico de ingressos e foi preservada para consulta." : "Esta sessão não pode mais ser alterada."}</p>
+          <Link className="inline-flex cursor-pointer items-center justify-center gap-2 self-start border border-rule px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:self-auto" href={`/organizer/events/${event.id}`}><Eye aria-hidden="true" className="size-[18px]" strokeWidth={1.8} /> Ver sessão</Link>
+        </footer>
       ) : (
-        <div className="flex h-fit flex-wrap items-center gap-2 border-t border-rule pt-5 sm:col-span-2 lg:col-span-1 lg:max-w-[20rem] lg:justify-end lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
-          <Link className="inline-flex items-center justify-center gap-2 bg-accent px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-accent-hover" href={`/organizer/events/${event.id}`}><ActionIcon name="edit" /> Editar</Link>
-          {event.canChangeMovie && !event.isPast ? <Link className="inline-flex items-center justify-center gap-2 border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}/change-movie`}><ActionIcon name="swap" /> Trocar filme</Link> : null}
-          {event.status === "DRAFT" ? <Link aria-label="Configurar e publicar sessão" className="inline-flex items-center justify-center gap-2 border border-ink bg-ink px-4 py-3 text-center font-code text-[0.68rem] font-medium uppercase tracking-[0.12em] text-accent hover:bg-ink/90" href={`/organizer/events/${event.id}`}><span aria-hidden="true" className="size-2 rounded-full bg-accent" /> Publicar</Link> : null}
-          {event.canDelete ? <DeleteOrganizerDraftButton eventId={event.id} /> : null}
-        </div>
+        <footer className="flex flex-col items-center gap-3 border-t border-rule pt-4 sm:col-span-2 sm:flex-row sm:justify-between">
+          {event.status === "DRAFT" ? (
+            <div className="flex items-center justify-center gap-3 sm:justify-start">
+              <p className="inline-flex items-center gap-2 font-code text-[0.7rem] font-medium uppercase tracking-[0.12em] text-ink-muted">
+                <Circle aria-hidden="true" className="size-3 fill-accent text-accent" strokeWidth={2} /> Rascunho
+              </p>
+              <Link aria-label="Configurar e publicar sessão" className="group inline-flex cursor-pointer items-center gap-1.5 border border-accent bg-accent px-3 py-2 font-code text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-ink shadow-[0_1px_0_rgba(20,20,20,0.18)] transition-colors hover:bg-ink hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink" href={`/organizer/events/${event.id}`}>
+                Publicar <Send aria-hidden="true" className="size-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={1.8} />
+              </Link>
+            </div>
+          ) : (
+            <p className="inline-flex items-center justify-center gap-2 font-code text-[0.7rem] font-medium uppercase tracking-[0.12em] text-success">
+              <Circle aria-hidden="true" className="size-3 fill-success" strokeWidth={2} /> Publicado
+            </p>
+          )}
+          <div aria-label="Ações da sessão" className="flex flex-nowrap items-center justify-center gap-1.5 sm:justify-end sm:gap-2">
+            <Link className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap bg-accent px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:px-3.5" href={`/organizer/events/${event.id}`}><Pencil aria-hidden="true" className="size-[18px]" strokeWidth={1.8} /> Editar</Link>
+            {event.canChangeMovie && !event.isPast ? <Link aria-label="Trocar filme" className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap border border-rule px-3 py-2.5 text-sm font-semibold transition-colors hover:bg-surface-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:px-3.5" href={`/organizer/events/${event.id}/change-movie`}><RefreshCw aria-hidden="true" className="size-[18px]" strokeWidth={1.8} /><span className="sm:hidden">Trocar</span><span className="hidden sm:inline">Trocar filme</span></Link> : null}
+            {event.canDelete ? <DeleteOrganizerDraftButton compact eventId={event.id} /> : null}
+          </div>
+        </footer>
       )}
     </article>
   );

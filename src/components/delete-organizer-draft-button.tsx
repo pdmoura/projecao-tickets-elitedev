@@ -2,13 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
 
 type DeleteOrganizerDraftButtonProps = {
+  compact?: boolean;
   eventId: string;
   label?: string;
 };
 
-export function DeleteOrganizerDraftButton({ eventId, label = "Excluir" }: DeleteOrganizerDraftButtonProps) {
+export function DeleteOrganizerDraftButton({ compact = false, eventId, label = "Excluir" }: DeleteOrganizerDraftButtonProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -64,13 +66,16 @@ export function DeleteOrganizerDraftButton({ eventId, label = "Excluir" }: Delet
     <>
       <button
         aria-label={label}
-        className="inline-flex items-center justify-center gap-2 border border-error px-4 py-3 text-sm font-semibold text-error hover:bg-error hover:text-white"
+        className={compact
+          ? "inline-flex size-10 cursor-pointer items-center justify-center border border-error text-error transition-colors hover:bg-error/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error"
+          : "inline-flex cursor-pointer items-center justify-center gap-2 border border-error px-4 py-3 text-sm font-semibold text-error transition-colors hover:bg-error hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-error"}
         onClick={() => setIsOpen(true)}
         ref={deleteButtonRef}
+        title={compact ? label : undefined}
         type="button"
       >
-        <svg aria-hidden="true" className="size-4 fill-none stroke-current stroke-[1.8]" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14" /></svg>
-        {label}
+        <Trash2 aria-hidden="true" className="size-[18px]" strokeWidth={1.8} />
+        {compact ? <span className="sr-only">{label}</span> : label}
       </button>
       {isOpen ? (
         <div aria-labelledby="delete-draft-title" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-ink/60 p-4" role="dialog">
@@ -82,7 +87,7 @@ export function DeleteOrganizerDraftButton({ eventId, label = "Excluir" }: Delet
             {error ? <p className="mt-4 text-sm text-error" role="alert">{error}</p> : null}
             <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
-                className="border border-rule px-4 py-3 text-sm font-semibold hover:bg-surface-secondary"
+                className="cursor-pointer border border-rule px-4 py-3 text-sm font-semibold hover:bg-surface-secondary disabled:cursor-not-allowed"
                 disabled={isDeleting}
                 onClick={() => setIsOpen(false)}
                 ref={cancelButtonRef}
@@ -91,7 +96,7 @@ export function DeleteOrganizerDraftButton({ eventId, label = "Excluir" }: Delet
                 Cancelar
               </button>
               <button
-                className="bg-error px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                className="cursor-pointer bg-error px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                 disabled={isDeleting}
                 onClick={deleteDraft}
                 type="button"
