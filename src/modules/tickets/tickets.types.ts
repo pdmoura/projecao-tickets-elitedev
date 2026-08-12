@@ -3,6 +3,7 @@ export type TicketSummary = {
   event: {
     id: string;
     movieTitle: string;
+    posterPath: string;
     roomName: string;
     startsAt: string;
     venueName: string;

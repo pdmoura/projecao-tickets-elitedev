@@ -131,7 +131,7 @@ export function CheckoutForm({ eventId, seats }: CheckoutFormProps) {
 
   return (
     <>
-      <form className="mt-8 border border-rule bg-surface p-5 sm:p-7" noValidate onSubmit={submitCheckout}>
+      <form className="border border-rule bg-surface p-5 sm:p-7" noValidate onSubmit={submitCheckout}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-3xl">Pagamento de teste</h2>

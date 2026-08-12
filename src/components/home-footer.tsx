@@ -21,7 +21,7 @@ export function HomeFooter() {
       <div className="mx-auto max-w-[88rem]">
         <div className="flex flex-col items-center gap-9 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
           <div className="max-w-xl">
-            <BrandLogo className="h-auto w-52 sm:w-44" inverse />
+            <BrandLogo className="h-auto w-60 sm:w-56" inverse />
             <p className="mt-6 max-w-lg font-display text-2xl leading-tight text-paper sm:text-3xl">
               Cinema que acontece: programação, lugar e encontro em uma mesma sala.
             </p>

@@ -48,6 +48,7 @@ function toTicketSummary(record: TicketPresentationRecord): TicketSummary {
     event: {
       id: record.event.id,
       movieTitle: record.event.movieSnapshot.title,
+      posterPath: record.event.movieSnapshot.posterPath ?? "/placeholders/poster-unavailable.png",
       roomName: event.roomName,
       startsAt: event.startsAt.toISOString(),
       venueName: event.venueName,

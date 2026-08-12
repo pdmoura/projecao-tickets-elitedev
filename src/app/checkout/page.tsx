@@ -67,7 +67,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
         <div className="mx-auto max-w-[88rem]">
           <AppHeader />
           <section className="py-14">
-            <p className="font-code text-xs uppercase tracking-[0.18em] text-accent">
+            <p className="inline-flex bg-ink px-3 py-1.5 font-code text-[0.7rem] font-medium uppercase tracking-[0.12em] text-accent">
               Checkout
             </p>
             <h1 className="mt-3 font-display text-5xl leading-[0.95]">
@@ -77,7 +77,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
               A disponibilidade será confirmada novamente dentro da transação de
               compra. Sua seleção ainda não representa uma reserva.
             </p>
-            <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(20rem,0.85fr)_minmax(0,1.15fr)] lg:items-start">
+            <div className="mx-auto mt-10 grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
               <article className="grid overflow-hidden border border-rule bg-surface sm:grid-cols-[9rem_minmax(0,1fr)] lg:grid-cols-1 xl:grid-cols-[10rem_minmax(0,1fr)]">
                 <Image alt={`Pôster de ${event.movie.title}`} className="aspect-[2/3] h-full w-full object-cover" height={600} src={event.movie.posterPath} width={400} />
                 <dl className="divide-y divide-rule">

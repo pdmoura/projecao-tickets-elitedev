@@ -7,7 +7,7 @@ const ticketPresentationSelect = {
   event: {
     select: {
       id: true,
-      movieSnapshot: { select: { title: true } },
+      movieSnapshot: { select: { posterPath: true, title: true } },
       roomName: true,
       startsAt: true,
       venueName: true,

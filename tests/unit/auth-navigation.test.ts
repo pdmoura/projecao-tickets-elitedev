@@ -20,6 +20,7 @@ vi.mock("@/modules/auth", () => ({
 import LoginPage from "@/app/login/page";
 import { dynamic as loginPageDynamic } from "@/app/login/page";
 import { AppHeader } from "@/components/app-header";
+import { HeaderNavigation } from "@/components/header-navigation";
 import { LoginForm } from "@/modules/auth/login-form";
 import { LogoutButton } from "@/modules/auth/logout-button";
 
@@ -42,6 +43,7 @@ function sessionFor(role: UserRole): AuthSession {
 type NavigationElement = ReactElement<{
   children?: ReactNode;
   href?: string;
+  items?: Array<{ href: string; label: string }>;
 }>;
 
 function isNavigationElement(node: ReactNode): node is NavigationElement {
@@ -65,9 +67,15 @@ function navigationItems(header: ReactElement) {
 }
 
 function links(header: ReactElement) {
-  return navigationItems(header)
-    .filter((item) => typeof item.props.href === "string")
-    .map((item) => ({ href: item.props.href, label: item.props.children }));
+  return navigationItems(header).flatMap((item) => {
+    if (item.type === HeaderNavigation) {
+      return item.props.items ?? [];
+    }
+
+    return typeof item.props.href === "string"
+      ? [{ href: item.props.href, label: item.props.children }]
+      : [];
+  });
 }
 
 function hasLogoutButton(header: ReactElement) {
