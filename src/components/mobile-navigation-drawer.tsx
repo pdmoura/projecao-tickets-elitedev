@@ -151,11 +151,26 @@ export function MobileNavigationDrawer({
           <nav className="mt-10 grid gap-2 text-center" aria-label="Links do menu">
             {primaryItems.map((item) => {
               const isActive = isActiveNavigationPath(pathname, item.href);
+              const className = `border-b border-rule px-3 py-4 font-display text-3xl transition-colors hover:text-accent ${isActive ? "text-ink underline decoration-accent decoration-2 underline-offset-8" : "text-ink"}`;
+
+              if (item.href.includes("#")) {
+                return (
+                  <a
+                    aria-current={isActive ? "page" : undefined}
+                    className={className}
+                    href={item.href}
+                    key={item.href}
+                    onClick={closeMenu}
+                  >
+                    {item.label}
+                  </a>
+                );
+              }
 
               return (
                 <Link
                   aria-current={isActive ? "page" : undefined}
-                  className={`border-b border-rule px-3 py-4 font-display text-3xl transition-colors hover:text-accent ${isActive ? "text-ink underline decoration-accent decoration-2 underline-offset-8" : "text-ink"}`}
+                  className={className}
                   href={item.href}
                   key={item.href}
                   onClick={closeMenu}

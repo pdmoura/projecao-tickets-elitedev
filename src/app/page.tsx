@@ -4,6 +4,7 @@ import { Armchair, CalendarDays, Ticket } from "lucide-react";
 
 import { AppHeader } from "@/components/app-header";
 import { HomeFooter } from "@/components/home-footer";
+import { HomeHashScroll } from "@/components/home-hash-scroll";
 import { formatCurrency, formatEventDate } from "@/modules/events/event-format";
 import { listPublishedEvents } from "@/modules/events";
 
@@ -52,6 +53,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <main className="min-h-screen bg-paper px-6 pb-0 pt-8 text-ink sm:px-10 lg:px-16">
+      <HomeHashScroll />
       <div className="mx-auto max-w-[88rem]">
         <AppHeader />
         <section className="grid items-center gap-8 py-12 sm:py-16 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-10 xl:gap-14">

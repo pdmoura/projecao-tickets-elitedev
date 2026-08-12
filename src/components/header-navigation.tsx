@@ -27,15 +27,29 @@ export function HeaderNavigation({ items }: HeaderNavigationProps) {
     <>
       {items.map((item) => {
         const isActive = isActiveNavigationPath(pathname, item.href);
+        const className = `font-code text-[0.68rem] font-medium uppercase tracking-[0.13em] underline decoration-accent underline-offset-4 transition-colors sm:text-xs ${
+          isActive
+            ? "text-ink decoration-[3px]"
+            : "text-ink-muted decoration-1 hover:text-ink hover:decoration-2 hover:decoration-accent"
+        }`;
+
+        if (item.href.includes("#")) {
+          return (
+            <a
+              aria-current={isActive ? "page" : undefined}
+              className={className}
+              href={item.href}
+              key={item.href}
+            >
+              {item.label}
+            </a>
+          );
+        }
 
         return (
           <Link
             aria-current={isActive ? "page" : undefined}
-            className={`font-code text-[0.68rem] font-medium uppercase tracking-[0.13em] underline decoration-accent underline-offset-4 transition-colors sm:text-xs ${
-              isActive
-                ? "text-ink decoration-[3px]"
-                : "text-ink-muted decoration-1 hover:text-ink hover:decoration-2 hover:decoration-accent"
-            }`}
+            className={className}
             href={item.href}
             key={item.href}
           >

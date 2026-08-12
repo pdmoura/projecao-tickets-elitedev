@@ -51,7 +51,11 @@ export function HomeFooter() {
 						</p>
 					</div>
 					<nav aria-label="Navegação do rodapé" className="grid grid-cols-1 gap-x-8 gap-y-3 text-center sm:grid-cols-2 lg:text-left">
-						{navigationLinks.map((link) => (
+						{navigationLinks.map((link) => link.href.includes("#") ? (
+							<a className="font-code text-[0.68rem] uppercase tracking-[0.13em] text-paper/70 transition hover:text-accent" href={link.href} key={link.href}>
+								{link.label}
+							</a>
+						) : (
 							<Link className="font-code text-[0.68rem] uppercase tracking-[0.13em] text-paper/70 transition hover:text-accent" href={link.href} key={link.href}>
 								{link.label}
 							</Link>

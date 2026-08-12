@@ -20,6 +20,25 @@ test("exibe o hero, a programação e o caminho de como funciona", async ({ page
   ).toBeVisible();
 });
 
+for (const route of ["/privacy", "/terms"]) {
+  test(`leva de ${route} pelo header para a seção Como funciona`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name.startsWith("mobile"), "Header desktop indisponível no viewport móvel.");
+    await page.goto(route);
+    await page.getByLabel("Navegação principal").getByRole("link", { name: "Como funciona" }).click();
+
+    await expect(page).toHaveURL(/\/#como-funciona$/);
+    await expect(page.locator("#como-funciona")).toBeInViewport();
+  });
+}
+
+test("leva pelo rodapé até Como funciona", async ({ page }) => {
+  await page.goto("/privacy");
+  await page.getByLabel("Navegação do rodapé").getByRole("link", { name: "Como funciona" }).click();
+
+  await expect(page).toHaveURL(/\/#como-funciona$/);
+  await expect(page.locator("#como-funciona")).toBeInViewport();
+});
+
 test("mantém a home íntegra e abre o drawer móvel sobre o conteúdo", async ({
   page,
 }, testInfo) => {
@@ -65,3 +84,15 @@ test("restaura a navegação desktop acima de 500px", async ({ page }, testInfo)
     element.scrollWidth === window.innerWidth,
   )).toBe(true);
 });
+
+for (const route of ["/privacy", "/terms"]) {
+  test(`leva o drawer móvel de ${route} até Como funciona`, async ({ page }, testInfo) => {
+    test.skip(!testInfo.project.name.startsWith("mobile"), "Cenário exclusivo do viewport móvel.");
+    await page.goto(route);
+    await page.getByRole("button", { name: "Abrir menu" }).click();
+    await page.getByRole("dialog", { name: "Navegação móvel" }).getByRole("link", { name: "Como funciona" }).click();
+
+    await expect(page).toHaveURL(/\/#como-funciona$/);
+    await expect(page.locator("#como-funciona")).toBeInViewport();
+  });
+}
