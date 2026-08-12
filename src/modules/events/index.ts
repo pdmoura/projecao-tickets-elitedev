@@ -10,6 +10,8 @@ export {
 export {
   createOrganizerDraft,
   createOrganizerEventsService,
+  changeOrganizerDraftMovie,
+  deleteOrganizerDraft,
   getOrganizerEvent,
   listOrganizerEvents,
   publishOrganizerEvent,

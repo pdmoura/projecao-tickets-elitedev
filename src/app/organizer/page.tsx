@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { BrandLogo } from "@/components/brand-logo";
+import { DeleteOrganizerDraftButton } from "@/components/delete-organizer-draft-button";
 import { LogoutButton } from "@/modules/auth/logout-button";
 import { getRoleHomePath, getSession } from "@/modules/auth";
 import { formatCurrency, formatEventDate } from "@/modules/events/event-format";
@@ -11,7 +12,11 @@ import { listOrganizerEvents } from "@/modules/events";
 
 export const dynamic = "force-dynamic";
 
-export default async function OrganizerPage() {
+export default async function OrganizerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ deleted?: string }>;
+}) {
   const request = new Request("http://localhost", { headers: await headers() });
   const session = await getSession(request);
 
@@ -24,6 +29,7 @@ export default async function OrganizerPage() {
   }
 
   const events = await listOrganizerEvents(session.user.id);
+  const { deleted } = await searchParams;
 
   return (
     <main className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16">
@@ -52,6 +58,12 @@ export default async function OrganizerPage() {
             </Link>
           </div>
         </section>
+
+        {deleted === "1" ? (
+          <p className="mb-6 border-l-4 border-success bg-surface p-4 text-sm text-success" role="status">
+            Rascunho excluído
+          </p>
+        ) : null}
 
         {events.length === 0 ? (
           <section className="border-y border-rule py-16 text-center">
@@ -82,9 +94,27 @@ export default async function OrganizerPage() {
                     {event.capacity ? ` · ${event.capacity} lugares` : ""}
                   </p>
                 </div>
-                <Link className="h-fit border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}`}>
-                  {event.status === "PUBLISHED" ? "Ver sessão" : "Editar rascunho"}
-                </Link>
+                {event.status === "PUBLISHED" ? (
+                  <div className="h-fit max-w-44 text-right">
+                    <Link className="inline-block border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}`}>
+                      Ver sessão
+                    </Link>
+                    <p className="mt-3 text-xs leading-5 text-ink-muted">Publicada: esta sessão não pode mais ser alterada.</p>
+                  </div>
+                ) : (
+                  <div className="flex h-fit flex-wrap gap-2 sm:max-w-52 sm:justify-end">
+                    <Link className="border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}`}>
+                      Editar
+                    </Link>
+                    <Link className="border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}/change-movie`}>
+                      Trocar filme
+                    </Link>
+                    <Link className="border border-rule px-4 py-3 text-center text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}`}>
+                      Publicar
+                    </Link>
+                    <DeleteOrganizerDraftButton eventId={event.id} />
+                  </div>
+                )}
               </article>
             ))}
           </section>

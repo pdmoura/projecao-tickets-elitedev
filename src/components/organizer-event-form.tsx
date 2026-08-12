@@ -154,6 +154,16 @@ export function OrganizerEventForm({ event }: { event: OrganizerEvent }) {
       <p className="mt-5 max-w-2xl leading-7 text-ink-muted">
         O rascunho permanece privado até a publicação. Ao publicar, os assentos serão gerados e a sessão ficará disponível na programação.
       </p>
+      <div className="mt-6 flex flex-wrap items-center gap-4 border-y border-rule py-4">
+        <Image alt={`Pôster atual de ${event.movie.title}`} className="h-20 w-14 border border-rule object-cover" height={120} src={event.movie.posterPath} width={80} />
+        <div className="min-w-0 flex-1">
+          <p className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Filme atual</p>
+          <p className="mt-1 font-display text-2xl">{event.movie.title}</p>
+        </div>
+        <Link className="border border-rule px-4 py-3 text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}/change-movie`}>
+          Trocar filme
+        </Link>
+      </div>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <form className="border border-rule bg-surface p-5 sm:p-7" onSubmit={saveDraft}>

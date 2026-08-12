@@ -111,6 +111,41 @@ function parseReleaseDate(releaseDate: string | null): Date | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+async function getOrCreateMovieSnapshot(
+  database: PrismaClient,
+  catalog: CatalogGateway,
+  movieExternalId: number,
+): Promise<{ id: string }> {
+  const existingSnapshot = await database.movieSnapshot.findUnique({
+    select: { id: true },
+    where: {
+      source_externalId: {
+        externalId: movieExternalId,
+        source: "TMDB",
+      },
+    },
+  });
+
+  if (existingSnapshot) {
+    return existingSnapshot;
+  }
+
+  const movie = await catalog.getMovieDetails(movieExternalId);
+
+  return database.movieSnapshot.create({
+    data: {
+      backdropPath: movie.backdropUrl,
+      externalId: movie.externalId,
+      overview: movie.overview || null,
+      posterPath: movie.posterUrl,
+      releaseDate: parseReleaseDate(movie.releaseDate),
+      source: "TMDB",
+      title: movie.title,
+    },
+    select: { id: true },
+  });
+}
+
 function createSeats(eventId: string, rows: number, seatsPerRow: number) {
   return Array.from({ length: rows }, (_, rowIndex) => {
     const rowLabel = String.fromCharCode("A".charCodeAt(0) + rowIndex);
@@ -195,32 +230,11 @@ export function createOrganizerEventsService(
     },
 
     async createDraft(organizerId: string, movieExternalId: number): Promise<OrganizerEvent> {
-      let movieSnapshot = await database.movieSnapshot.findUnique({
-        select: { id: true },
-        where: {
-          source_externalId: {
-            externalId: movieExternalId,
-            source: "TMDB",
-          },
-        },
-      });
-
-      if (!movieSnapshot) {
-        const movie = await catalog.getMovieDetails(movieExternalId);
-
-        movieSnapshot = await database.movieSnapshot.create({
-          data: {
-            backdropPath: movie.backdropUrl,
-            externalId: movie.externalId,
-            overview: movie.overview || null,
-            posterPath: movie.posterUrl,
-            releaseDate: parseReleaseDate(movie.releaseDate),
-            source: "TMDB",
-            title: movie.title,
-          },
-          select: { id: true },
-        });
-      }
+      const movieSnapshot = await getOrCreateMovieSnapshot(
+        database,
+        catalog,
+        movieExternalId,
+      );
 
       const event = await database.event.create({
         data: {
@@ -266,6 +280,67 @@ export function createOrganizerEventsService(
       });
 
       return toOrganizerEvent(updatedEvent);
+    },
+
+    async changeDraftMovie(
+      organizerId: string,
+      eventId: string,
+      movieExternalId: number,
+    ): Promise<OrganizerEvent> {
+      const event = await database.event.findUnique({
+        select: { organizerId: true, status: true },
+        where: { id: eventId },
+      });
+
+      if (!event) {
+        throw new OrganizerEventOwnershipError();
+      }
+
+      assertOwnership(event, organizerId);
+      assertDraft(event);
+
+      const movieSnapshot = await getOrCreateMovieSnapshot(
+        database,
+        catalog,
+        movieExternalId,
+      );
+      const updatedEvent = await database.event.update({
+        data: { movieSnapshotId: movieSnapshot.id },
+        select: organizerEventSelect,
+        where: { id: eventId },
+      });
+
+      return toOrganizerEvent(updatedEvent);
+    },
+
+    async deleteDraft(organizerId: string, eventId: string): Promise<void> {
+      await database.$transaction(async (transaction) => {
+        const event = await transaction.event.findUnique({
+          select: { organizerId: true, status: true },
+          where: { id: eventId },
+        });
+
+        if (!event) {
+          throw new OrganizerEventOwnershipError();
+        }
+
+        assertOwnership(event, organizerId);
+        assertDraft(event);
+
+        const [reservations, payments, tickets, validations] = await Promise.all([
+          transaction.reservation.count({ where: { eventId } }),
+          transaction.payment.count({ where: { eventId } }),
+          transaction.ticket.count({ where: { eventId } }),
+          transaction.ticketValidation.count({ where: { eventId } }),
+        ]);
+
+        if (reservations + payments + tickets + validations > 0) {
+          throw new EventImmutableError();
+        }
+
+        await transaction.eventSeat.deleteMany({ where: { eventId } });
+        await transaction.event.delete({ where: { id: eventId } });
+      });
     },
 
     async publish(organizerId: string, eventId: string): Promise<OrganizerEvent> {
@@ -320,4 +395,6 @@ export const listOrganizerEvents = organizerEventsService.list;
 export const getOrganizerEvent = organizerEventsService.get;
 export const createOrganizerDraft = organizerEventsService.createDraft;
 export const updateOrganizerDraft = organizerEventsService.updateDraft;
+export const changeOrganizerDraftMovie = organizerEventsService.changeDraftMovie;
+export const deleteOrganizerDraft = organizerEventsService.deleteDraft;
 export const publishOrganizerEvent = organizerEventsService.publish;
