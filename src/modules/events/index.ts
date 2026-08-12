@@ -1,9 +1,12 @@
 import "server-only";
 
-export { EventNotFoundError } from "./events.errors";
-export { getPublishedEvent, listPublishedEvents } from "./events.service";
+export { EventAlreadyStartedError, EventNotFoundError } from "./events.errors";
+export { getPublicEvent, getPublishedEvent, listGateEvents, listPublishedEvents } from "./events.service";
+export { getGateAdmissionState, isCustomerSaleOpen } from "./event-temporal";
+export type { GateAdmissionState } from "./event-temporal";
 export {
   EventImmutableError,
+  EventHasTransactionHistoryError,
   OrganizerEventOwnershipError,
   OrganizerEventValidationError,
 } from "./organizer-events.errors";

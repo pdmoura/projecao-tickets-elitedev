@@ -36,16 +36,20 @@ export function findTicketByValidationTokenHash(
   });
 }
 
-export async function isPublishedEvent(
+export async function getCheckInEvent(
   database: PrismaClient,
   eventId: string,
-): Promise<boolean> {
-  return Boolean(
-    await database.event.findFirst({
-      select: { id: true },
-      where: { id: eventId, status: "PUBLISHED" },
-    }),
-  );
+): Promise<{ startsAt: Date; status: "PUBLISHED" } | null> {
+  const event = await database.event.findFirst({
+    select: { startsAt: true, status: true },
+    where: { id: eventId, startsAt: { not: null }, status: "PUBLISHED" },
+  });
+
+  if (!event?.startsAt || event.status !== "PUBLISHED") {
+    return null;
+  }
+
+  return { startsAt: event.startsAt, status: "PUBLISHED" };
 }
 
 export function recordNonConsumingValidation(

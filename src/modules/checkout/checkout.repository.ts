@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { Prisma, type PrismaClient } from "@/generated/prisma/client";
-import { EventNotFoundError } from "@/modules/events";
+import { EventAlreadyStartedError, EventNotFoundError } from "@/modules/events";
 import type { StoredTicketCredentials } from "@/modules/tickets/ticket-credentials";
 
 import { SeatUnavailableError } from "./checkout.errors";
@@ -34,17 +34,17 @@ export async function getCheckoutAmount(
   database: PrismaClient,
   input: { eventId: string; seatIds: string[] },
 ): Promise<number> {
-  const event = await database.event.findFirst({
-    select: { priceCents: true },
-    where: {
-      id: input.eventId,
-      startsAt: { gt: new Date() },
-      status: "PUBLISHED",
-    },
+  const event = await database.event.findUnique({
+    select: { priceCents: true, startsAt: true, status: true },
+    where: { id: input.eventId },
   });
 
-  if (!event) {
+  if (!event || event.status !== "PUBLISHED" || !event.startsAt) {
     throw new EventNotFoundError();
+  }
+
+  if (event.startsAt.getTime() <= Date.now()) {
+    throw new EventAlreadyStartedError();
   }
 
   const seatCount = await database.eventSeat.count({
@@ -88,17 +88,17 @@ export async function persistApprovedCheckout(
 ): Promise<ApprovedCheckout> {
   return database.$transaction(
     async (transaction) => {
-      const event = await transaction.event.findFirst({
-        select: { priceCents: true },
-        where: {
-          id: input.eventId,
-          startsAt: { gt: new Date() },
-          status: "PUBLISHED",
-        },
+      const event = await transaction.event.findUnique({
+        select: { priceCents: true, startsAt: true, status: true },
+        where: { id: input.eventId },
       });
 
-      if (!event) {
+      if (!event || event.status !== "PUBLISHED" || !event.startsAt) {
         throw new EventNotFoundError();
+      }
+
+      if (event.startsAt.getTime() <= Date.now()) {
+        throw new EventAlreadyStartedError();
       }
 
       const lockedSeats = await transaction.$queryRaw<LockedSeat[]>(Prisma.sql`

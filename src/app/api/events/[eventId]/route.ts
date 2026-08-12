@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getPublishedEvent } from "@/modules/events";
+import { getPublicEvent } from "@/modules/events";
 
 import { eventErrorResponse } from "../_response";
 
@@ -15,7 +15,7 @@ export async function GET(
   try {
     const { eventId } = await params;
 
-    return NextResponse.json(await getPublishedEvent(eventId));
+    return NextResponse.json(await getPublicEvent(eventId));
   } catch (error) {
     return eventErrorResponse(error);
   }

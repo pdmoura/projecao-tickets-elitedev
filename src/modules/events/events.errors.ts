@@ -7,3 +7,13 @@ export class EventNotFoundError extends Error {
     this.name = "EventNotFoundError";
   }
 }
+
+export class EventAlreadyStartedError extends Error {
+  readonly code = "EVENT_ALREADY_STARTED";
+  readonly status = 409;
+
+  constructor() {
+    super("A sessão já começou e não está mais disponível para compra.");
+    this.name = "EventAlreadyStartedError";
+  }
+}

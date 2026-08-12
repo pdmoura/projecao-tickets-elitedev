@@ -31,7 +31,7 @@ export default async function ChangeOrganizerMoviePage({
     throw error;
   }
 
-  if (event.status === "PUBLISHED") redirect(`/organizer/events/${eventId}`);
+  if (!event.canChangeMovie) redirect(`/organizer/events/${eventId}`);
 
   return (
     <main className="min-h-screen bg-paper px-6 py-8 text-ink sm:px-10 lg:px-16">
@@ -39,7 +39,7 @@ export default async function ChangeOrganizerMoviePage({
         <header className="flex flex-wrap items-center justify-between gap-5 border-b border-rule pb-5">
           <BrandLogo priority />
           <nav aria-label="Navegação do organizador" className="flex items-center gap-5">
-            <Link className="font-code text-xs font-medium uppercase tracking-[0.14em] underline decoration-accent decoration-2 underline-offset-4" href={`/organizer/events/${eventId}`}>Voltar ao rascunho</Link>
+            <Link className="font-code text-xs font-medium uppercase tracking-[0.14em] underline decoration-accent decoration-2 underline-offset-4" href={`/organizer/events/${eventId}`}>Voltar à sessão</Link>
             <LogoutButton />
           </nav>
         </header>

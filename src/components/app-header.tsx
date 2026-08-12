@@ -21,6 +21,7 @@ export async function AppHeader() {
         <HeaderNavigation
           items={[
             { href: "/", label: "Programação" },
+            { href: "/#como-funciona", label: "Como funciona" },
             ...(session?.user.role === "CUSTOMER"
               ? [{ href: "/tickets", label: "Meus ingressos" }]
               : []),

@@ -27,3 +27,13 @@ export class EventImmutableError extends Error {
     this.name = "EventImmutableError";
   }
 }
+
+export class EventHasTransactionHistoryError extends Error {
+  readonly code = "EVENT_HAS_TRANSACTION_HISTORY";
+  readonly status = 409;
+
+  constructor() {
+    super("Esta sessão já possui ingressos emitidos e não pode mais ter seus dados principais alterados.");
+    this.name = "EventHasTransactionHistoryError";
+  }
+}

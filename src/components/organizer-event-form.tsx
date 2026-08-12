@@ -61,6 +61,7 @@ export function OrganizerEventForm({
   const [state, setState] = useState<FormState>({ kind: "idle" });
   const capacity = useMemo(() => Number(rows) * Number(seatsPerRow), [rows, seatsPerRow]);
   const isPublished = event.status === "PUBLISHED";
+  const isReadOnly = !event.canEdit;
 
   function requestBody() {
     return {
@@ -89,7 +90,12 @@ export function OrganizerEventForm({
         throw new Error(getErrorMessage(payload, "Não foi possível salvar o rascunho."));
       }
 
-      setState({ kind: "success", message: "Rascunho salvo. Revise os dados antes de publicar." });
+      setState({
+        kind: "success",
+        message: isPublished
+          ? "Alterações salvas na sessão publicada."
+          : "Rascunho salvo. Revise os dados antes de publicar.",
+      });
       router.refresh();
     } catch (error) {
       setState({
@@ -133,7 +139,7 @@ export function OrganizerEventForm({
     }
   }
 
-  if (isPublished) {
+  if (isReadOnly) {
     return (
       <section className="py-10 sm:py-14">
         <div className="grid gap-8 lg:grid-cols-[minmax(14rem,22rem)_minmax(0,1fr)] lg:items-start">
@@ -142,7 +148,9 @@ export function OrganizerEventForm({
             <p className="font-code text-xs uppercase tracking-[0.18em] text-success">Sessão publicada</p>
             <h1 className="mt-3 font-display text-5xl leading-[0.95] text-balance sm:text-6xl">{event.movie.title}</h1>
             <p className="mt-5 max-w-2xl leading-7 text-ink-muted">
-              Esta sessão já está na programação e não pode mais ser alterada.
+              {event.hasTransactionalHistory
+                ? "Esta sessão possui histórico de ingressos e foi preservada para consulta."
+                : "Esta sessão não pode mais ser alterada."}
             </p>
             <dl className="mt-8 grid gap-px border border-rule bg-rule sm:grid-cols-2">
               <div className="bg-surface p-5"><dt className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Quando</dt><dd className="mt-2 font-medium">{event.startsAt ? formatEventDate(event.startsAt) : "—"}</dd></div>
@@ -161,10 +169,10 @@ export function OrganizerEventForm({
 
   return (
     <section className="py-10 sm:py-14">
-      <p className="inline-flex bg-ink px-3 py-1.5 font-code text-[0.7rem] font-medium uppercase tracking-[0.12em] text-accent">Nova sessão · etapas 2 e 3 de 3</p>
-      <h1 className="mt-3 font-display text-5xl leading-[0.95]">Configure, revise e publique</h1>
+      <p className="inline-flex bg-ink px-3 py-1.5 font-code text-[0.7rem] font-medium uppercase tracking-[0.12em] text-accent">{isPublished ? "Sessão publicada · edição permitida" : "Nova sessão · etapas 2 e 3 de 3"}</p>
+      <h1 className="mt-3 font-display text-5xl leading-[0.95]">{isPublished ? "Edite a sessão" : "Configure, revise e publique"}</h1>
       <p className="mt-5 max-w-2xl leading-7 text-ink-muted">
-        O rascunho permanece privado até a publicação. Ao publicar, os assentos serão gerados e a sessão ficará disponível na programação.
+        {isPublished ? "Esta sessão ainda não possui compras. As alterações serão refletidas na programação." : "O rascunho permanece privado até a publicação. Ao publicar, os assentos serão gerados e a sessão ficará disponível na programação."}
       </p>
       <div className="mt-6 flex flex-wrap items-center gap-4 border-y border-rule py-4">
         <Image alt={`Pôster atual de ${event.movie.title}`} className="h-20 w-14 border border-rule object-cover" height={120} src={event.movie.posterPath} width={80} />
@@ -172,9 +180,7 @@ export function OrganizerEventForm({
           <p className="font-code text-xs uppercase tracking-[0.14em] text-ink-muted">Filme atual</p>
           <p className="mt-1 font-display text-2xl">{event.movie.title}</p>
         </div>
-        <Link className="border border-rule px-4 py-3 text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}/change-movie`}>
-          Trocar filme
-        </Link>
+        {event.canChangeMovie ? <Link className="border border-rule px-4 py-3 text-sm font-semibold hover:bg-surface-secondary" href={`/organizer/events/${event.id}/change-movie`}>Trocar filme</Link> : null}
       </div>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -190,7 +196,7 @@ export function OrganizerEventForm({
           </div>
           <p className="mt-5 text-sm text-ink-muted">Capacidade prevista: {Number.isFinite(capacity) && capacity > 0 ? `${capacity} lugares` : "informe as dimensões da sala"}. Máximo de 600 lugares.</p>
           <button className="mt-7 border border-rule px-5 py-3 text-sm font-semibold hover:bg-surface-secondary disabled:opacity-60" disabled={state.kind === "saving" || state.kind === "publishing"} type="submit">
-            {state.kind === "saving" ? "Salvando…" : "Salvar rascunho"}
+            {state.kind === "saving" ? "Salvando…" : isPublished ? "Salvar alterações" : "Salvar rascunho"}
           </button>
         </form>
 
@@ -203,10 +209,7 @@ export function OrganizerEventForm({
             <div><dt className="text-ink-muted">Local</dt><dd className="mt-1 font-medium">{venueName || "Defina o local"} · {roomName || "sala"}</dd></div>
             <div><dt className="text-ink-muted">Preço</dt><dd className="mt-1 font-medium">{Number(price.replace(",", ".")) > 0 ? formatCurrency(Math.round(Number(price.replace(",", ".")) * 100)) : "Defina o preço"}</dd></div>
           </dl>
-          <button className="mt-6 w-full bg-accent px-4 py-3 text-sm font-semibold text-ink hover:bg-accent-hover disabled:opacity-60" disabled={state.kind === "saving" || state.kind === "publishing"} onClick={publishEvent} type="button">
-            {state.kind === "publishing" ? "Publicando…" : "Publicar sessão"}
-          </button>
-          <p className="mt-4 text-xs leading-5 text-ink-muted">A publicação torna a sessão visível para o público e bloqueia novas alterações.</p>
+          {!isPublished ? <><button className="mt-6 w-full bg-accent px-4 py-3 text-sm font-semibold text-ink hover:bg-accent-hover disabled:opacity-60" disabled={state.kind === "saving" || state.kind === "publishing"} onClick={publishEvent} type="button">{state.kind === "publishing" ? "Publicando…" : "Publicar sessão"}</button><p className="mt-4 text-xs leading-5 text-ink-muted">A publicação torna a sessão visível para o público e gera os assentos.</p></> : <p className="mt-6 text-xs leading-5 text-ink-muted">Enquanto não houver compras, você pode ajustar os dados principais desta sessão.</p>}
         </aside>
       </div>
 

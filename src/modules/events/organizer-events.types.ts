@@ -1,7 +1,12 @@
 export type OrganizerEvent = {
+  canChangeMovie: boolean;
+  canDelete: boolean;
+  canEdit: boolean;
   capacity: number | null;
   createdAt: string;
   id: string;
+  hasTransactionalHistory: boolean;
+  isPast: boolean;
   movie: {
     overview: string | null;
     posterPath: string;

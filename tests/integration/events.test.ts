@@ -94,6 +94,26 @@ describe("published events and seats", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("never exposes an already-started session in public discovery", async () => {
+    const original = await db.event.findUniqueOrThrow({
+      select: { startsAt: true },
+      where: { id: "seed-event-spirited-away" },
+    });
+    await db.event.update({
+      data: { startsAt: new Date(Date.now() - 1_000) },
+      where: { id: "seed-event-spirited-away" },
+    });
+
+    await expect(listPublishedEvents("Spirited")).resolves.toEqual([]);
+    await expect(getPublishedEvent("seed-event-spirited-away")).rejects.toBeInstanceOf(
+      EventNotFoundError,
+    );
+    await db.event.update({
+      data: { startsAt: original.startsAt },
+      where: { id: "seed-event-spirited-away" },
+    });
+  });
+
   it("returns seats for the requested event and rejects a seat from another event", async () => {
     const firstEventSeats = await getEventSeats("seed-event-spirited-away");
     const secondEventSeats = await getEventSeats("seed-event-paris-texas");

@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 
 type DeleteOrganizerDraftButtonProps = {
   eventId: string;
+  label?: string;
 };
 
-export function DeleteOrganizerDraftButton({ eventId }: DeleteOrganizerDraftButtonProps) {
+export function DeleteOrganizerDraftButton({ eventId, label = "Excluir" }: DeleteOrganizerDraftButtonProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -45,7 +46,8 @@ export function DeleteOrganizerDraftButton({ eventId }: DeleteOrganizerDraftButt
       });
 
       if (!response.ok) {
-        throw new Error("Não foi possível excluir o rascunho.");
+        const payload = (await response.json()) as { error?: { message?: string } };
+        throw new Error(payload.error?.message ?? "Não foi possível excluir a sessão.");
       }
 
       setIsOpen(false);
@@ -66,14 +68,14 @@ export function DeleteOrganizerDraftButton({ eventId }: DeleteOrganizerDraftButt
         ref={deleteButtonRef}
         type="button"
       >
-        Excluir
+        {label}
       </button>
       {isOpen ? (
         <div aria-labelledby="delete-draft-title" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-ink/60 p-4" role="dialog">
           <div className="w-full max-w-md border border-rule bg-paper p-6 shadow-2xl">
-            <h2 className="font-display text-3xl" id="delete-draft-title">Excluir rascunho?</h2>
+            <h2 className="font-display text-3xl" id="delete-draft-title">Excluir sessão?</h2>
             <p className="mt-4 leading-7 text-ink-muted">
-              Esta sessão ainda não foi publicada. Essa ação não pode ser desfeita.
+              Esta sessão não possui histórico transacional. Esta ação não pode ser desfeita.
             </p>
             {error ? <p className="mt-4 text-sm text-error" role="alert">{error}</p> : null}
             <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -92,7 +94,7 @@ export function DeleteOrganizerDraftButton({ eventId }: DeleteOrganizerDraftButt
                 onClick={deleteDraft}
                 type="button"
               >
-                {isDeleting ? "Excluindo…" : "Excluir rascunho"}
+                {isDeleting ? "Excluindo…" : "Excluir sessão"}
               </button>
             </div>
           </div>

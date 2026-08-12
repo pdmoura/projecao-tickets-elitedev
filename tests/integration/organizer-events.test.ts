@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { authRouteHandlers } from "@/modules/auth/next-handler";
 import {
   createOrganizerEventsService,
-  EventImmutableError,
+  EventHasTransactionHistoryError,
   OrganizerEventOwnershipError,
 } from "@/modules/events";
 import type { CatalogMovieDetails } from "@/modules/catalog/catalog.types";
@@ -147,7 +147,7 @@ describe("organizer event creation and publication", () => {
     ]);
   });
 
-  it("rejects edits to a published event without changing its session data", async () => {
+  it("allows edits to a published event without transaction history", async () => {
     const organizer = await db.user.findUniqueOrThrow({
       where: { email: "organizador@projecao.local" },
     });
@@ -159,14 +159,12 @@ describe("organizer event creation and publication", () => {
     await service.updateDraft(organizer.id, draft.id, validDraftInput());
     await service.publish(organizer.id, draft.id);
 
-    await expect(
-      service.updateDraft(organizer.id, draft.id, {
-        ...validDraftInput(),
-        roomName: "Outra sala",
-      }),
-    ).rejects.toBeInstanceOf(EventImmutableError);
+    await service.updateDraft(organizer.id, draft.id, {
+      ...validDraftInput(),
+      roomName: "Outra sala",
+    });
     await expect(db.event.findUniqueOrThrow({ where: { id: draft.id } })).resolves.toMatchObject({
-      roomName: "Sala Curadoria",
+      roomName: "Outra sala",
       status: "PUBLISHED",
     });
   });
@@ -269,7 +267,7 @@ describe("organizer event creation and publication", () => {
     expect(catalog.getMovieDetails).toHaveBeenCalledTimes(2);
   });
 
-  it("forbids changing or deleting a foreign or published event", async () => {
+  it("forbids foreign changes and locks a published event with history", async () => {
     const organizer = await db.user.findUniqueOrThrow({
       where: { email: "organizador@projecao.local" },
     });
@@ -296,15 +294,25 @@ describe("organizer event creation and publication", () => {
 
     await service.updateDraft(organizer.id, ownDraft.id, validDraftInput());
     await service.publish(organizer.id, ownDraft.id);
+    await db.payment.create({
+      data: {
+        amountCents: 3400,
+        customerId: (await db.user.findUniqueOrThrow({ where: { email: "cliente1@projecao.local" } })).id,
+        eventId: ownDraft.id,
+        provider: "SIMULATOR",
+        reference: `history-${ownDraft.id}-${Date.now()}`,
+        status: "DECLINED",
+      },
+    });
     await expect(
       service.changeDraftMovie(organizer.id, ownDraft.id, replacementMovie.externalId),
-    ).rejects.toBeInstanceOf(EventImmutableError);
+    ).rejects.toBeInstanceOf(EventHasTransactionHistoryError);
     await expect(service.deleteDraft(organizer.id, ownDraft.id)).rejects.toBeInstanceOf(
-      EventImmutableError,
+      EventHasTransactionHistoryError,
     );
   });
 
-  it("deletes an owned draft through the route and keeps published events", async () => {
+  it("deletes owned sessions without transaction history through the route", async () => {
     const organizer = await db.user.findUniqueOrThrow({
       where: { email: "organizador@projecao.local" },
     });
@@ -337,6 +345,6 @@ describe("organizer event creation and publication", () => {
       }),
       { params: Promise.resolve({ eventId: published.id }) },
     );
-    expect(publishedResponse.status).toBe(409);
+    expect(publishedResponse.status).toBe(204);
   });
 });

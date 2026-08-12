@@ -8,6 +8,9 @@ type HeaderNavigationProps = {
 };
 
 export function isActiveNavigationPath(pathname: string, href: string): boolean {
+  if (href.includes("#")) {
+    return false;
+  }
   if (href === "/") {
     return pathname === "/" || pathname.startsWith("/events/");
   }

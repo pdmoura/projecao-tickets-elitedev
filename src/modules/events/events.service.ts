@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@/lib/db";
 
+import { getGateAdmissionState, type GateAdmissionState } from "./event-temporal";
 import { EventNotFoundError } from "./events.errors";
 import type { PublishedEventDetail, PublishedEventSummary } from "./events.types";
 
@@ -136,4 +137,71 @@ export async function getPublishedEvent(
       releaseDate: event.movieSnapshot.releaseDate?.toISOString() ?? null,
     },
   };
+}
+
+export async function getPublicEvent(eventId: string): Promise<PublishedEventDetail> {
+  const event = await db.event.findFirst({
+    select: {
+      capacity: true,
+      id: true,
+      movieSnapshot: {
+        select: {
+          overview: true,
+          posterPath: true,
+          releaseDate: true,
+          title: true,
+        },
+      },
+      priceCents: true,
+      roomName: true,
+      startsAt: true,
+      venueName: true,
+    },
+    where: { id: eventId, status: "PUBLISHED" },
+  });
+
+  if (!event) {
+    throw new EventNotFoundError();
+  }
+
+  const summary = toEventSummary(event);
+
+  return {
+    ...summary,
+    capacity: requirePublishedEventFields(event).capacity,
+    movie: {
+      ...summary.movie,
+      overview: event.movieSnapshot.overview,
+      releaseDate: event.movieSnapshot.releaseDate?.toISOString() ?? null,
+    },
+  };
+}
+
+export async function listGateEvents(): Promise<
+  Array<PublishedEventSummary & { gateState: GateAdmissionState }>
+> {
+  const events = await db.event.findMany({
+    orderBy: { startsAt: "asc" },
+    select: {
+      capacity: true,
+      id: true,
+      movieSnapshot: { select: { posterPath: true, title: true } },
+      priceCents: true,
+      roomName: true,
+      startsAt: true,
+      venueName: true,
+    },
+    where: { startsAt: { not: null }, status: "PUBLISHED" },
+  });
+
+  const withStates = events.map((event) => {
+    const summary = toEventSummary(event);
+    return {
+      ...summary,
+      gateState: getGateAdmissionState(new Date(summary.startsAt)),
+    };
+  });
+
+  const order = { ACTIVE: 0, NOT_STARTED: 1, EXPIRED: 2 } as const;
+  return withStates.sort((left, right) => order[left.gateState] - order[right.gateState]);
 }

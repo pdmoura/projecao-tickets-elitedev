@@ -158,7 +158,7 @@ export function QrCameraScanner({
       </div>
       {state.kind === "unsupported" ? <p className="mt-4 border-l-4 border-gate-used bg-gate-bg p-4 text-sm text-gate-used" role="status">Este navegador não oferece acesso à câmera. Use o código manual.</p> : null}
       {state.kind === "error" ? <p className="mt-4 border-l-4 border-gate-invalid bg-gate-bg p-4 text-sm text-gate-invalid" role="alert">{state.message}</p> : null}
-      <div className="mt-5 flex flex-wrap justify-center gap-3 sm:justify-start">
+      <div className="mt-5 flex flex-wrap justify-center gap-3">
         <button className="bg-gate-valid px-5 py-3 text-sm font-semibold text-gate-bg hover:brightness-110 disabled:opacity-60" disabled={disabled || state.kind === "starting" || state.kind === "scanning"} onClick={startCamera} type="button">{state.kind === "starting" ? "Iniciando…" : "Usar câmera"}</button>
         {state.kind === "scanning" ? <button className="border border-gate-border px-5 py-3 text-sm font-semibold text-gate-text hover:bg-white/5" onClick={() => { stopCamera(); setState({ kind: "idle" }); }} type="button">Parar câmera</button> : null}
       </div>

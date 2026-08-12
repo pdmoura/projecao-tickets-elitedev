@@ -13,7 +13,7 @@ import {
   SeatUnavailableError,
   UnsupportedTestCardError,
 } from "@/modules/checkout";
-import { EventNotFoundError } from "@/modules/events";
+import { EventAlreadyStartedError, EventNotFoundError } from "@/modules/events";
 
 function checkoutErrorResponse(error: unknown): NextResponse {
   if (
@@ -21,6 +21,7 @@ function checkoutErrorResponse(error: unknown): NextResponse {
     error instanceof AuthorizationError ||
     error instanceof CheckoutValidationError ||
     error instanceof EventNotFoundError ||
+    error instanceof EventAlreadyStartedError ||
     error instanceof PaymentDeclinedError ||
     error instanceof UnsupportedTestCardError
   ) {

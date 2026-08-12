@@ -10,7 +10,7 @@ import {
   formatEventDate,
   formatReleaseYear,
 } from "@/modules/events/event-format";
-import { EventNotFoundError, getPublishedEvent } from "@/modules/events";
+import { EventNotFoundError, getPublicEvent, isCustomerSaleOpen } from "@/modules/events";
 import { getEventSeats } from "@/modules/seats";
 import { getSession } from "@/modules/auth";
 
@@ -23,7 +23,7 @@ type EventPageProps = {
 
 async function getEventPageData(eventId: string) {
   try {
-    return await Promise.all([getPublishedEvent(eventId), getEventSeats(eventId)]);
+    return await getPublicEvent(eventId);
   } catch (error) {
     if (error instanceof EventNotFoundError) {
       notFound();
@@ -38,7 +38,9 @@ export default async function EventPage({ params, searchParams }: EventPageProps
   const session = await getSession(request);
   const { eventId } = await params;
   const resolvedSearchParams = await searchParams;
-  const [event, seats] = await getEventPageData(eventId);
+  const event = await getEventPageData(eventId);
+  const saleOpen = isCustomerSaleOpen(new Date(event.startsAt));
+  const seats = saleOpen ? await getEventSeats(eventId) : [];
   const availableSeats = seats.filter((seat) => seat.status === "AVAILABLE").length;
   const releaseYear = formatReleaseYear(event.movie.releaseDate);
 
@@ -57,7 +59,7 @@ export default async function EventPage({ params, searchParams }: EventPageProps
             />
             <div>
               <p className="font-code text-xs uppercase tracking-[0.18em] text-accent">
-                Em cartaz
+                {saleOpen ? "Em cartaz" : "Sessão encerrada para vendas"}
               </p>
               <h1 className="mt-3 font-display text-5xl leading-[0.95] text-balance sm:text-6xl">
                 {event.movie.title}
@@ -102,13 +104,22 @@ export default async function EventPage({ params, searchParams }: EventPageProps
                     Disponibilidade
                   </dt>
                   <dd className="mt-2 text-sm font-medium">
-                    {availableSeats} de {event.capacity} assentos
+                    {saleOpen ? `${availableSeats} de ${event.capacity} assentos` : "Vendas encerradas"}
                   </dd>
                 </div>
               </dl>
             </div>
           </article>
-          {session?.user.role === "ORGANIZER" ? (
+          {!saleOpen ? (
+            <section className="mt-12 border-t border-rule pt-8">
+              <div className="max-w-2xl border-l-4 border-warning bg-surface-secondary p-6 sm:p-7">
+                <p className="font-code text-xs uppercase tracking-[0.16em] text-warning">Sessão encerrada para vendas</p>
+                <h2 className="mt-3 font-display text-3xl">Esta sessão já começou.</h2>
+                <p className="mt-4 leading-7 text-ink-muted">Esta sessão já começou e não está mais disponível para compra.</p>
+                <Link className="mt-6 inline-block bg-accent px-5 py-3 text-sm font-semibold text-ink hover:bg-accent-hover" href="/">Voltar para programação</Link>
+              </div>
+            </section>
+          ) : session?.user.role === "ORGANIZER" ? (
             <section className="mt-12 border-t border-rule pt-8">
               <div className="max-w-2xl border-l-4 border-accent bg-surface-secondary p-6 sm:p-7">
                 <p className="font-code text-xs uppercase tracking-[0.16em] text-accent">Acesso de organizador</p>

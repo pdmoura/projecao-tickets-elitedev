@@ -5,10 +5,11 @@ import { db } from "@/lib/db";
 import { getMovieDetails, type CatalogMovieDetails } from "@/modules/catalog";
 
 import {
-  EventImmutableError,
+  EventHasTransactionHistoryError,
   OrganizerEventOwnershipError,
   OrganizerEventValidationError,
 } from "./organizer-events.errors";
+import { hasTransactionalHistory } from "./event-history";
 import type {
   OrganizerEvent,
   OrganizerEventUpdateInput,
@@ -66,11 +67,23 @@ const organizerEventSelect = {
   venueName: true,
 } as const;
 
-function toOrganizerEvent(event: EventRecord): OrganizerEvent {
+function toOrganizerEvent(
+  event: EventRecord,
+  hasHistory: boolean,
+  now = new Date(),
+): OrganizerEvent {
+  const isPast = Boolean(event.startsAt && event.startsAt.getTime() <= now.getTime());
+  const canEdit = event.status === "DRAFT" || !hasHistory;
+
   return {
+    canChangeMovie: canEdit,
+    canDelete: !hasHistory,
+    canEdit,
     capacity: event.capacity,
     createdAt: event.createdAt.toISOString(),
     id: event.id,
+    hasTransactionalHistory: hasHistory,
+    isPast,
     movie: {
       overview: event.movieSnapshot.overview,
       posterPath: event.movieSnapshot.posterPath ?? posterFallbackPath,
@@ -92,12 +105,6 @@ function toOrganizerEvent(event: EventRecord): OrganizerEvent {
 function assertOwnership(event: { organizerId: string }, organizerId: string): void {
   if (event.organizerId !== organizerId) {
     throw new OrganizerEventOwnershipError();
-  }
-}
-
-function assertDraft(event: { status: "DRAFT" | "PUBLISHED" }): void {
-  if (event.status !== "DRAFT") {
-    throw new EventImmutableError();
   }
 }
 
@@ -164,6 +171,12 @@ function createSeats(eventId: string, rows: number, seatsPerRow: number) {
   }).flat();
 }
 
+function assertEditable(hasHistory: boolean): void {
+  if (hasHistory) {
+    throw new EventHasTransactionHistoryError();
+  }
+}
+
 function assertPublishable(event: {
   priceCents: number | null;
   roomName: string | null;
@@ -211,7 +224,11 @@ export function createOrganizerEventsService(
         where: { organizerId },
       });
 
-      return events.map(toOrganizerEvent);
+      return Promise.all(
+        events.map(async (event) =>
+          toOrganizerEvent(event, await hasTransactionalHistory(database, event.id)),
+        ),
+      );
     },
 
     async get(organizerId: string, eventId: string): Promise<OrganizerEvent> {
@@ -226,7 +243,7 @@ export function createOrganizerEventsService(
 
       assertOwnership(event, organizerId);
 
-      return toOrganizerEvent(event);
+      return toOrganizerEvent(event, await hasTransactionalHistory(database, event.id));
     },
 
     async createDraft(organizerId: string, movieExternalId: number): Promise<OrganizerEvent> {
@@ -245,7 +262,7 @@ export function createOrganizerEventsService(
         select: organizerEventSelect,
       });
 
-      return toOrganizerEvent(event);
+      return toOrganizerEvent(event, false);
     },
 
     async updateDraft(
@@ -254,7 +271,13 @@ export function createOrganizerEventsService(
       input: OrganizerEventUpdateInput,
     ): Promise<OrganizerEvent> {
       const event = await database.event.findUnique({
-        select: { organizerId: true, status: true },
+        select: {
+          organizerId: true,
+          rows: true,
+          seatsPerRow: true,
+          startsAt: true,
+          status: true,
+        },
         where: { id: eventId },
       });
 
@@ -263,23 +286,46 @@ export function createOrganizerEventsService(
       }
 
       assertOwnership(event, organizerId);
-      assertDraft(event);
+      if (
+        event.startsAt &&
+        event.startsAt.getTime() <= Date.now() &&
+        input.startsAt.getTime() > Date.now()
+      ) {
+        throw new OrganizerEventValidationError(
+          "Uma sessão passada não pode ser reagendada para o futuro. Crie uma nova sessão.",
+        );
+      }
 
-      const updatedEvent = await database.event.update({
-        data: {
-          capacity: input.rows * input.seatsPerRow,
-          priceCents: input.priceCents,
-          roomName: input.roomName,
-          rows: input.rows,
-          seatsPerRow: input.seatsPerRow,
-          startsAt: input.startsAt,
-          venueName: input.venueName,
-        },
-        select: organizerEventSelect,
-        where: { id: eventId },
+      const updatedEvent = await database.$transaction(async (transaction) => {
+        assertEditable(await hasTransactionalHistory(transaction, eventId));
+        const layoutChanged =
+          event.status === "PUBLISHED" &&
+          (event.rows !== input.rows || event.seatsPerRow !== input.seatsPerRow);
+        if (layoutChanged) {
+          await transaction.eventSeat.deleteMany({ where: { eventId } });
+        }
+        const updated = await transaction.event.update({
+          data: {
+            capacity: input.rows * input.seatsPerRow,
+            priceCents: input.priceCents,
+            roomName: input.roomName,
+            rows: input.rows,
+            seatsPerRow: input.seatsPerRow,
+            startsAt: input.startsAt,
+            venueName: input.venueName,
+          },
+          select: organizerEventSelect,
+          where: { id: eventId },
+        });
+        if (layoutChanged) {
+          await transaction.eventSeat.createMany({
+            data: createSeats(eventId, input.rows, input.seatsPerRow),
+          });
+        }
+        return updated;
       });
 
-      return toOrganizerEvent(updatedEvent);
+      return toOrganizerEvent(updatedEvent, false);
     },
 
     async changeDraftMovie(
@@ -288,7 +334,7 @@ export function createOrganizerEventsService(
       movieExternalId: number,
     ): Promise<OrganizerEvent> {
       const event = await database.event.findUnique({
-        select: { organizerId: true, status: true },
+        select: { organizerId: true, startsAt: true, status: true },
         where: { id: eventId },
       });
 
@@ -297,26 +343,28 @@ export function createOrganizerEventsService(
       }
 
       assertOwnership(event, organizerId);
-      assertDraft(event);
-
+      assertEditable(await hasTransactionalHistory(database, eventId));
       const movieSnapshot = await getOrCreateMovieSnapshot(
         database,
         catalog,
         movieExternalId,
       );
-      const updatedEvent = await database.event.update({
-        data: { movieSnapshotId: movieSnapshot.id },
-        select: organizerEventSelect,
-        where: { id: eventId },
+      const updatedEvent = await database.$transaction(async (transaction) => {
+        assertEditable(await hasTransactionalHistory(transaction, eventId));
+        return transaction.event.update({
+          data: { movieSnapshotId: movieSnapshot.id },
+          select: organizerEventSelect,
+          where: { id: eventId },
+        });
       });
 
-      return toOrganizerEvent(updatedEvent);
+      return toOrganizerEvent(updatedEvent, false);
     },
 
     async deleteDraft(organizerId: string, eventId: string): Promise<void> {
       await database.$transaction(async (transaction) => {
         const event = await transaction.event.findUnique({
-          select: { organizerId: true, status: true },
+          select: { organizerId: true, startsAt: true, status: true },
           where: { id: eventId },
         });
 
@@ -325,18 +373,7 @@ export function createOrganizerEventsService(
         }
 
         assertOwnership(event, organizerId);
-        assertDraft(event);
-
-        const [reservations, payments, tickets, validations] = await Promise.all([
-          transaction.reservation.count({ where: { eventId } }),
-          transaction.payment.count({ where: { eventId } }),
-          transaction.ticket.count({ where: { eventId } }),
-          transaction.ticketValidation.count({ where: { eventId } }),
-        ]);
-
-        if (reservations + payments + tickets + validations > 0) {
-          throw new EventImmutableError();
-        }
+        assertEditable(await hasTransactionalHistory(transaction, eventId));
 
         await transaction.eventSeat.deleteMany({ where: { eventId } });
         await transaction.event.delete({ where: { id: eventId } });
@@ -355,7 +392,9 @@ export function createOrganizerEventsService(
         }
 
         assertOwnership(event, organizerId);
-        assertDraft(event);
+        if (event.status !== "DRAFT") {
+          throw new OrganizerEventValidationError("Esta sessão já foi publicada.");
+        }
         assertPublishable(event);
 
         const publication = await transaction.event.updateMany({
@@ -371,7 +410,7 @@ export function createOrganizerEventsService(
         });
 
         if (publication.count !== 1) {
-          throw new EventImmutableError();
+          throw new OrganizerEventValidationError("Não foi possível publicar esta sessão.");
         }
 
         await transaction.eventSeat.createMany({
@@ -383,7 +422,7 @@ export function createOrganizerEventsService(
           where: { id: eventId },
         });
 
-        return toOrganizerEvent(publishedEvent);
+        return toOrganizerEvent(publishedEvent, false);
       });
     },
   };

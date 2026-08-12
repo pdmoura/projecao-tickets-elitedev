@@ -5,7 +5,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { GateCheckIn } from "@/components/gate-check-in";
 import { LogoutButton } from "@/modules/auth/logout-button";
 import { getRoleHomePath, getSession } from "@/modules/auth";
-import { listPublishedEvents } from "@/modules/events";
+import { listGateEvents } from "@/modules/events";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export default async function GatePage() {
     redirect(getRoleHomePath(session.user.role));
   }
 
-  const events = await listPublishedEvents();
+  const events = await listGateEvents();
 
   return (
     <main className="min-h-screen bg-gate-bg px-6 py-8 text-gate-text sm:px-10 lg:px-16">

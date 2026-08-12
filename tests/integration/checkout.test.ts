@@ -228,6 +228,23 @@ describe("transactional checkout", () => {
     await expect(db.ticket.count()).resolves.toBe(0);
   });
 
+  it("rejects checkout after the session has started without mutating inventory", async () => {
+    const seat = await getSeat("seed-event-spirited-away", "A1");
+    const customerCookie = await signIn("cliente1@projecao.local");
+    await db.event.update({
+      data: { startsAt: new Date(Date.now() - 1_000) },
+      where: { id: seat.eventId },
+    });
+
+    const response = await postCheckout(customerCookie, approvedCheckoutInput(seat.eventId, [seat.id]));
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "EVENT_ALREADY_STARTED" } });
+    await expect(db.payment.count()).resolves.toBe(0);
+    await expect(db.reservation.count()).resolves.toBe(0);
+    await expect(db.ticket.count()).resolves.toBe(0);
+    await expect(db.eventSeat.findUniqueOrThrow({ where: { id: seat.id } })).resolves.toMatchObject({ status: "AVAILABLE" });
+  });
+
   it("rolls back the full multi-seat purchase when one seat conflicts", async () => {
     const availableSeat = await getSeat("seed-event-spirited-away", "A1");
     const soldSeat = await getSeat("seed-event-spirited-away", "C3");
