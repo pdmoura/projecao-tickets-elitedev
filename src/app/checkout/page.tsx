@@ -82,7 +82,10 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
                 <dd className="font-semibold">{formatCurrency(totalCents)}</dd>
               </div>
             </dl>
-            <CheckoutForm eventId={event.id} seatIds={seats.map((seat) => seat.id)} />
+            <CheckoutForm
+              eventId={event.id}
+              seats={seats.map((seat) => ({ id: seat.id, label: seat.label }))}
+            />
           </section>
         </div>
       </main>

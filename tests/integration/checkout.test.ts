@@ -215,8 +215,15 @@ describe("transactional checkout", () => {
     );
 
     expect(response.status).toBe(409);
-    await expect(response.json()).resolves.toMatchObject({
-      error: { code: "SEAT_UNAVAILABLE" },
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "SEAT_UNAVAILABLE",
+        details: {
+          seatIds: [soldSeat.id],
+          seatLabels: ["C3"],
+        },
+        message: "Um ou mais assentos n\u00e3o est\u00e3o mais dispon\u00edveis.",
+      },
     });
     await expect(db.reservation.count()).resolves.toBe(0);
     await expect(db.reservationItem.count()).resolves.toBe(0);
