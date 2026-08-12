@@ -29,6 +29,7 @@
     "@prisma/client": "7.9.1",
     "better-auth": "1.6.27",
     "jsqr": "1.4.0",
+    "lucide-react": "^1.31.0",
     "next": "16.3.0",
     "pg": "8.23.0",
     "qrcode": "1.5.4",

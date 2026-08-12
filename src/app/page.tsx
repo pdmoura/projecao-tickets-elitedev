@@ -87,16 +87,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <p className="mt-3 text-ink-muted">Tente outro título ou volte para toda a programação.</p>
             </div>
           ) : (
-            <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {events.map((event) => (
                 <article className="group overflow-hidden border border-rule bg-surface transition duration-200 hover:-translate-y-0.5 hover:border-ink hover:shadow-[0_14px_30px_rgba(20,20,20,0.08)]" key={event.id}>
                   <Link className="block" href={`/events/${event.id}`}>
-                    <Image alt="" className="aspect-[2/3] w-full object-cover transition duration-500 group-hover:scale-[1.02]" height={900} src={event.movie.posterPath} width={600} />
-                    <div className="p-5">
-                      <p className="font-code text-xs uppercase tracking-[0.13em] text-ink-muted">{formatEventDate(event.startsAt)}</p>
-                      <h2 className="mt-3 font-display text-3xl leading-tight">{event.movie.title}</h2>
-                      <p className="mt-3 text-sm text-ink-muted">{event.venueName} · {event.roomName}</p>
-                      <p className="mt-4 text-sm font-semibold">A partir de {formatCurrency(event.priceCents)}</p>
+                  <Image alt="" className="aspect-[2/3] w-full object-cover transition duration-500 group-hover:scale-[1.02]" height={900} src={event.movie.posterPath} width={600} />
+                    <div className="p-3.5 sm:p-4 lg:p-5">
+                      <p className="font-code text-[0.62rem] uppercase tracking-[0.1em] text-ink-muted sm:text-xs sm:tracking-[0.13em]">{formatEventDate(event.startsAt)}</p>
+                      <h2 className="mt-2 line-clamp-2 font-display text-xl leading-tight sm:mt-3 sm:text-2xl lg:text-3xl">{event.movie.title}</h2>
+                      <p className="mt-2 truncate text-xs text-ink-muted sm:mt-3 sm:text-sm">{event.venueName} · {event.roomName}</p>
+                      <p className="mt-3 text-xs font-semibold sm:mt-4 sm:text-sm">A partir de {formatCurrency(event.priceCents)}</p>
                     </div>
                   </Link>
                 </article>
@@ -112,10 +112,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <SectionLabel>Como funciona</SectionLabel>
           <div className="mt-8 grid divide-y divide-rule border-y border-rule lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {steps.map((step) => (
-              <article className="flex gap-5 px-0 py-7 sm:px-4 lg:px-7 lg:py-3" key={step.title}>
-                <span className="grid size-16 shrink-0 place-items-center rounded-full border border-rule bg-surface-secondary">
-                  <Image alt="" aria-hidden="true" className="size-11 object-contain" height={64} src={step.icon} width={64} />
-                </span>
+              <article className="flex gap-4 px-0 py-7 sm:gap-5 sm:px-4 lg:px-7 lg:py-4" key={step.title}>
+                <Image alt="" aria-hidden="true" className="mt-0.5 size-14 shrink-0 object-contain brightness-0 contrast-150 sm:size-16" height={80} src={step.icon} width={80} />
                 <div>
                   <h2 className="font-display text-3xl leading-tight">{step.title}</h2>
                   <p className="mt-3 text-sm leading-6 text-ink-muted">{step.description}</p>
