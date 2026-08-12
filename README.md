@@ -102,7 +102,7 @@ Copie `.env.example` para `.env.local` e preencha apenas valores locais. Nunca v
 
 ### Banco local com Docker
 
-O Compose sobe somente o PostgreSQL; a aplicação continua rodando no host.
+O Compose sobe somente o PostgreSQL; a aplicação continua rodando no host. A imagem oficial do PostgreSQL é obtida pelo espelho público `mirror.gcr.io`, para reduzir falhas ocasionais de download do Docker Hub.
 
 ```bash
 docker compose up -d

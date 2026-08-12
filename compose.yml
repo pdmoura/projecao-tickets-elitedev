@@ -1,7 +1,7 @@
 services:
   postgres:
     container_name: projecao-t02-postgres
-    image: postgres:16-alpine
+    image: mirror.gcr.io/library/postgres:16-alpine
     environment:
       POSTGRES_USER: projecao
       POSTGRES_PASSWORD: projecao
