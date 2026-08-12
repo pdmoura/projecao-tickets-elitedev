@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+export type NavigationItem = { href: string; label: string };
+
 type HeaderNavigationProps = {
-  items: Array<{ href: string; label: string }>;
+  items: NavigationItem[];
 };
 
 export function isActiveNavigationPath(pathname: string, href: string): boolean {

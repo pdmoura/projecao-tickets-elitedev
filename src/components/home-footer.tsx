@@ -30,11 +30,19 @@ const socialLinks: readonly SocialLink[] = [
 	},
 ];
 
+const navigationLinks = [
+	{ href: "/", label: "Programação" },
+	{ href: "/#como-funciona", label: "Como funciona" },
+	{ href: "/login", label: "Entrar" },
+	{ href: "/privacy", label: "Política de privacidade" },
+	{ href: "/terms", label: "Termos de uso" },
+] as const;
+
 export function HomeFooter() {
 	return (
 		<footer className="-mx-6 mt-8 bg-ink px-6 py-11 text-paper sm:-mx-10 sm:px-10 sm:py-14 lg:-mx-16 lg:px-16">
 			<div className="mx-auto max-w-[88rem]">
-				<div className="flex flex-col items-center gap-9 text-center sm:flex-row sm:items-end sm:justify-between sm:text-left">
+				<div className="flex flex-col items-center gap-9 text-center lg:flex-row lg:items-end lg:justify-between lg:text-left">
 					<div className="max-w-xl">
 						<BrandLogo className="h-auto w-60 sm:w-56" inverse />
 						<p className="mt-6 max-w-lg font-display text-2xl leading-tight text-paper sm:text-3xl">
@@ -42,6 +50,13 @@ export function HomeFooter() {
 							em uma mesma sala.
 						</p>
 					</div>
+					<nav aria-label="Navegação do rodapé" className="grid grid-cols-1 gap-x-8 gap-y-3 text-center sm:grid-cols-2 lg:text-left">
+						{navigationLinks.map((link) => (
+							<Link className="font-code text-[0.68rem] uppercase tracking-[0.13em] text-paper/70 transition hover:text-accent" href={link.href} key={link.href}>
+								{link.label}
+							</Link>
+						))}
+					</nav>
 					<div
 						aria-label="Redes sociais"
 						className="flex flex-wrap items-center justify-center gap-3"

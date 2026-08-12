@@ -5,13 +5,20 @@ import { useRouter } from "next/navigation";
 
 import { authClient } from "./client";
 
-export function LogoutButton({ inverse = false }: { inverse?: boolean }) {
+export function LogoutButton({
+  inverse = false,
+  onComplete,
+}: {
+  inverse?: boolean;
+  onComplete?: () => void;
+}) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleLogout() {
     setIsSubmitting(true);
     await authClient.signOut();
+    onComplete?.();
     router.push("/login");
     router.refresh();
   }

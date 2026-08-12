@@ -21,6 +21,7 @@ import LoginPage from "@/app/login/page";
 import { dynamic as loginPageDynamic } from "@/app/login/page";
 import { AppHeader } from "@/components/app-header";
 import { HeaderNavigation } from "@/components/header-navigation";
+import { MobileNavigationDrawer } from "@/components/mobile-navigation-drawer";
 import { LoginForm } from "@/modules/auth/login-form";
 import { LogoutButton } from "@/modules/auth/logout-button";
 
@@ -82,6 +83,19 @@ function hasLogoutButton(header: ReactElement) {
   return navigationItems(header).some((item) => item.type === LogoutButton);
 }
 
+function mobileDrawer(header: ReactElement) {
+  const drawer = Children.toArray((header as NavigationElement).props.children).find(
+    (child): child is NavigationElement =>
+      isNavigationElement(child) && child.type === MobileNavigationDrawer,
+  );
+
+  if (!drawer) {
+    throw new Error("Expected the mobile navigation drawer.");
+  }
+
+  return drawer;
+}
+
 function containsElementType(node: ReactNode, type: ReactElement["type"]): boolean {
   if (!isValidElement(node)) {
     return false;
@@ -109,9 +123,17 @@ describe("global authentication navigation", () => {
 
     expect(links(header)).toEqual([
       { href: "/", label: "Programação" },
+      { href: "/#como-funciona", label: "Como funciona" },
       { href: "/login", label: "Entrar" },
     ]);
     expect(hasLogoutButton(header)).toBe(false);
+    expect(mobileDrawer(header).props).toMatchObject({
+      isAuthenticated: false,
+      items: [
+        { href: "/", label: "Programação" },
+        { href: "/#como-funciona", label: "Como funciona" },
+      ],
+    });
   });
 
   it.each([
@@ -125,9 +147,18 @@ describe("global authentication navigation", () => {
 
     expect(links(header)).toEqual([
       { href: "/", label: "Programação" },
+      { href: "/#como-funciona", label: "Como funciona" },
       { href, label },
     ]);
     expect(hasLogoutButton(header)).toBe(true);
+    expect(mobileDrawer(header).props).toMatchObject({
+      isAuthenticated: true,
+      items: [
+        { href: "/", label: "Programação" },
+        { href: "/#como-funciona", label: "Como funciona" },
+        { href, label },
+      ],
+    });
   });
 
   it.each([

@@ -63,11 +63,13 @@ export function DeleteOrganizerDraftButton({ eventId, label = "Excluir" }: Delet
   return (
     <>
       <button
-        className="border border-error px-4 py-3 text-sm font-semibold text-error hover:bg-error hover:text-white"
+        aria-label={label}
+        className="inline-flex items-center justify-center gap-2 border border-error px-4 py-3 text-sm font-semibold text-error hover:bg-error hover:text-white"
         onClick={() => setIsOpen(true)}
         ref={deleteButtonRef}
         type="button"
       >
+        <svg aria-hidden="true" className="size-4 fill-none stroke-current stroke-[1.8]" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14" /></svg>
         {label}
       </button>
       {isOpen ? (

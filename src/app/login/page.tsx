@@ -23,7 +23,7 @@ export default async function LoginPage() {
       <aside className="relative isolate hidden min-h-screen overflow-hidden bg-ink p-10 text-paper lg:flex lg:flex-col lg:p-14">
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-cover bg-center" style={{ backgroundImage: "url('/brand/login-cinema-bg.webp')" }} />
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(9,16,24,0.58),rgba(9,16,24,0.9))]" />
-        <BrandLogo inverse priority />
+        <BrandLogo className="h-auto w-64" inverse priority />
         <div className="my-auto max-w-md text-shadow-[0_2px_18px_rgba(0,0,0,0.65)]">
           <p className="font-code text-xs uppercase tracking-[0.22em] text-accent">
             Projeção
