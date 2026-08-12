@@ -4,11 +4,27 @@
 
 Plataforma full-stack para criar sessões de cinema, vender assentos marcados e validar ingressos digitais. O foco do MVP é o ciclo completo: organização da sessão, compra transacional, ticket seguro e check-in de uso único.
 
+<p align="center">
+  <img src="docs/media/projecao-home.webp" alt="Página inicial do Projeção" width="100%" />
+</p>
+
 Tenho 24 anos, sou desenvolvedor júnior e estou perto de concluir a faculdade. Um amigo já tinha me pedido algo parecido com este projeto, mas eu não consegui desenvolver na época por falta de tempo. O challenge foi uma oportunidade de finalmente explorar a ideia com mais cuidado: quis entregar algo funcional, com identidade própria, e deixar uma base que possa evoluir depois.
 
 ## Demo publicada
 
 - URL: [projecao-tickets.vercel.app](https://projecao-tickets.vercel.app)
+
+## Demonstração
+
+### Validação na Portaria
+
+O fluxo mostra uma credencial válida sendo utilizada e uma segunda tentativa retornando ingresso já utilizado.
+
+[▶ Ver demonstração da Portaria no mobile](docs/media/projecao-gate-mobile-highlight.mp4)
+
+### Visão geral
+
+[▶ Ver uma demonstração rápida da aplicação](docs/media/projecao-desktop-highlight.mp4)
 
 ## Fluxo rápido de avaliação
 
