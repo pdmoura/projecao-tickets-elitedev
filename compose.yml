@@ -1,0 +1,21 @@
+services:
+  postgres:
+    container_name: projecao-t02-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: projecao
+      POSTGRES_PASSWORD: projecao
+      POSTGRES_DB: projecao_t02
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U projecao -d projecao_t02"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - projecao_postgres_data:/var/lib/postgresql/data
+      - ./docker/init-test-database.sql:/docker-entrypoint-initdb.d/init-test-database.sql:ro
+
+volumes:
+  projecao_postgres_data:

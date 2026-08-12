@@ -148,7 +148,7 @@ Possíveis melhorias futuras, priorizadas e tecnicamente plausíveis.
 
 ## Uso de IA
 
-Apontar para `docs/10-AI-USAGE-LOG-TEMPLATE.md` depois de renomeá-lo/preenchê-lo como registro final de uso de IA.
+Apontar para `docs/10-AI-USAGE-LOG.md` como registro final de uso de IA.
 
 Explicar como a IA acelerou o trabalho e onde o julgamento humano alterou/rejeitou sugestões.
 

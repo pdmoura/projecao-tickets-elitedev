@@ -1,12 +1,12 @@
-# Desafio Elite Dev — Índice da Documentação
+# Projeção — Índice da Documentação
 
-> Pacote de documentação de trabalho para o desafio da Plataforma de Eventos e Ingressos.
+> Documentação da entrega do desafio de sessões de cinema e ingressos.
 >
-> **Status:** especificação pré-implementação com plano definitivo de implementação aprovado.
+> **Status:** implementação concluída até T12; documentação final consolidada e quality gate de entrega aprovado.
 
 ## Objetivo
 
-Esta pasta existe para tornar explícito o processo de engenharia antes da escrita do código. Ela registra o escopo do produto, regras de domínio, limites arquiteturais, decisões de UX, contratos de API e critérios de aceite, para que ferramentas de implementação como o Codex executem decisões já tomadas em vez de defini-las implicitamente.
+Esta pasta registra o escopo do produto, regras de domínio, limites arquiteturais, decisões de UX, contratos de API, critérios de aceite e o histórico da implementação da Projeção.
 
 ## Documentos
 
@@ -19,12 +19,12 @@ Esta pasta existe para tornar explícito o processo de engenharia antes da escri
 7. **07-ACCEPTANCE-TESTS.md** — critérios de aceite e matriz de testes de maior valor.
 8. **08-ARCHITECTURE-DECISIONS.md** — registro em estilo ADR das principais escolhas e trade-offs.
 9. **09-CODEX-CONTEXT.md** — limites concisos de implementação destinados a serem fornecidos ao Codex antes dos prompts por tarefa.
-10. **10-AI-USAGE-LOG-TEMPLATE.md** — template pronto para o repositório para documentar o uso de IA durante o desafio.
-11. **11-README-OUTLINE.md** — estrutura do README final para preencher durante a implementação.
-12. **12-REQUIREMENTS-TRACEABILITY.md** — matriz de cobertura requisito por requisito em relação ao desafio.
+10. **10-AI-USAGE-LOG.md** — registro consolidado de uso de IA e das revisões realizadas.
+11. **11-README-OUTLINE.md** — estrutura histórica que orientou o README final na raiz do repositório.
+12. **12-REQUIREMENTS-TRACEABILITY.md** — matriz consolidada de cobertura requisito por requisito em relação ao desafio.
 13. **13-SECURITY-CONCURRENCY-CHECKLIST.md** — checklist focado de segurança e verificação de condições de corrida.
 14. **14-OFFICIAL-REFERENCES.md** — links para a documentação técnica primária usada durante a preparação da especificação.
-15. **15-IMPLEMENTATION-PLAN.md** — plano definitivo com a sequência aprovada de implementação, dependências, gates e estratégia de entrega.
+15. **15-IMPLEMENTATION-PLAN.md** — histórico do plano aprovado e estado concluído da implementação.
 
 ## Precedência das fontes de verdade
 
@@ -53,16 +53,9 @@ Se dois documentos parecerem entrar em conflito, use esta ordem:
 - Identidade visual: programação de cinema independente + bilhete impresso; explicitamente não semelhante à Netflix e não SaaS genérico.
 - Seleção de filme pelo organizador inclui preview do trailer da TMDb quando disponível.
 
-## Ainda não congelado
+## Estado final
 
-Os itens abaixo podem ser refinados sem invalidar este pacote:
-
-- Nome do produto e logo.
-- Valores HEX exatos das cores e fontes.
-- Escolhas exatas de biblioteca de componentes, se houver.
-- Nomenclatura exata das URLs quando a semântica equivalente for preservada.
-- Nomes exatos dos campos do Prisma, desde que o significado e as constraints do domínio permaneçam iguais.
-- Provedor final do banco de dados em produção.
+O produto se chama Projeção, usa Next.js, PostgreSQL, Prisma, Better Auth e TMDb. A aplicação publicada está na Vercel com Neon como provider inicial de PostgreSQL. O escopo e a identidade visual desta entrega estão congelados.
 
 ## Handoff de design
 

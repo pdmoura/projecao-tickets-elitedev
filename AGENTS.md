@@ -199,7 +199,7 @@ Implementation-ready brand assets live under:
 - `public/brand/logo-inverse.svg` — inverse logo for dark operational surfaces
 - `public/brand/logo-mark.svg` — compact brand mark
 - `public/brand/favicon.svg` — browser/favicon variant derived from the approved brand mark
-- `public/brand/opengraph-image.png` — social/Open Graph preview image
+- `public/brand/opengraph-image.jpg` — social/Open Graph preview image
 
 Approved fallback assets live under:
 
@@ -214,7 +214,7 @@ In particular:
 
 - `poster-unavailable.png` is only a visual fallback for missing TMDb artwork;
 - `avatar-default.png` does not imply avatar upload or profile-image management;
-- `opengraph-image.png` is intended for application metadata/social preview;
+- `opengraph-image.jpg` is intended for application metadata/social preview;
 - `logo-inverse.svg` should be preferred on dark gate/check-in surfaces where appropriate.
 
 Do not regenerate equivalent logos, icons, posters, avatars, or brand artwork unless an existing asset is technically unusable.

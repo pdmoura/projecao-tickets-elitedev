@@ -1,5 +1,13 @@
 # Plano Definitivo de Implementação — Projeção Tickets
 
+> **Estado final:** todas as etapas T01–T12 foram concluídas. O conteúdo abaixo é mantido como histórico do plano aprovado, das decisões e dos gates usados na entrega.
+
+| Etapas | Estado final |
+|---|---|
+| T01–T03 | Bootstrap, schema, autenticação e seed concluídos. |
+| T04–T08 | Catálogo, eventos, checkout, tickets e check-in concluídos. |
+| T09–T12 | Deploy inicial, organizer, polling/share/câmera e qualidade concluídos. |
+
 ## 1. Avaliação do estado atual do repositório
 
 O repositório contém a especificação funcional, arquitetural, visual, critérios de aceite, matriz de rastreabilidade, referências de design e assets aprovados. Ainda não existe aplicação executável:
@@ -8,7 +16,7 @@ O repositório contém a especificação funcional, arquitetural, visual, crité
 - a branch está limpa e os commits atuais representam apenas documentação, design e preparação operacional;
 - `.env.local` está ignorado e contém somente as variáveis já conhecidas, sem necessidade de revelar seus valores;
 - a variável `TICKET_CREDENTIAL_ENCRYPTION_KEY` ainda precisa ser adicionada na implementação;
-- o asset existente `public/brand/opengraphimage.png` diverge do nome documentado `public/brand/opengraph-image.png`; o nome documentado será adotado no bootstrap;
+- o asset existente `public/brand/opengraphimage.png` diverge do nome documentado `public/brand/opengraph-image.jpg`; o nome documentado será adotado no bootstrap;
 - não há código legado a migrar: a implementação começa como greenfield, mas com escopo e decisões já definidos.
 
 ## 2. Resultado da auditoria documental
@@ -39,7 +47,7 @@ As ambiguidades identificadas estão resolvidas:
 - a reexibição futura do QR será resolvida por hash para lookup mais cópia criptografada do token;
 - versões numéricas de Node, Next.js, Prisma e bibliotecas serão escolhidas e fixadas durante T01, não tratadas como decisões permanentes de produto;
 - o primeiro deploy não dependerá de TMDb;
-- o nome canônico do asset Open Graph será `public/brand/opengraph-image.png`.
+- o nome canônico do asset Open Graph será `public/brand/opengraph-image.jpg`.
 
 Não resta conflito documental que exija decisão prévia adicional.
 
